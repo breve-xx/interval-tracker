@@ -9,6 +9,7 @@ import { parseOccurrences } from './parser.js';
 import { loadRecords, addRecords, clearRecords } from './dataService.js';
 import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell } from './formatters.js';
 import { computeStatistics } from './statistics.js';
+import { predictNext } from './prediction.js';
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 
@@ -72,12 +73,14 @@ export function renderList() {
     listEl.innerHTML = '';
     sectionEl.classList.add('hidden');
     renderStatistics();
+    renderPrediction();
     return;
   }
 
   listEl.innerHTML = records.map(buildCardHTML).join('');
   sectionEl.classList.remove('hidden');
   renderStatistics();
+  renderPrediction();
 }
 
 // ─── Statistics Renderer ──────────────────────────────────────────────────────
@@ -132,7 +135,52 @@ export function renderStatistics() {
   sectionEl.classList.remove('hidden');
 }
 
-// ─── New Session Handler ──────────────────────────────────────────────────────
+// ─── Prediction Renderer ──────────────────────────────────────────────────────
+
+/**
+ * renderPrediction — Computes and renders the prediction section.
+ * Hides #prediction-section when fewer than 2 occurrences exist.
+ */
+export function renderPrediction() {
+  const sectionEl = getEl('prediction-section');
+  const outputEl  = getEl('prediction-output');
+  if (!sectionEl || !outputEl) return;
+
+  const result = predictNext(loadRecords());
+
+  if (!result) {
+    sectionEl.classList.add('hidden');
+    return;
+  }
+
+  const {
+    predictedDate, earliestDate, latestDate,
+    confidence, confidenceLabel: label,
+    strategy, intervalUsedMs,
+  } = result;
+
+  const predicted = new Date(predictedDate);
+  const earliest  = new Date(earliestDate);
+  const latest    = new Date(latestDate);
+
+  const isoPredicted = `${formatOccurrenceDate(predicted)} ${formatOccurrenceTime(predicted)}`;
+  const isoEarliest  = `${formatOccurrenceDate(earliest)} ${formatOccurrenceTime(earliest)}`;
+  const isoLatest    = `${formatOccurrenceDate(latest)} ${formatOccurrenceTime(latest)}`;
+
+  outputEl.innerHTML = `
+    <p class="prediction-tell">${formatOccurrenceTell(predicted)}</p>
+    <dl class="prediction-details">
+      <dt>Predicted date</dt><dd>${isoPredicted}</dd>
+      <dt>Window (earliest)</dt><dd>${isoEarliest}</dd>
+      <dt>Window (latest)</dt><dd>${isoLatest}</dd>
+      <dt>Confidence</dt><dd>${confidence}% — <strong>${label}</strong></dd>
+      <dt>Strategy</dt><dd>${strategy}</dd>
+      <dt>Interval used</dt><dd>${Math.round(intervalUsedMs / 60_000).toLocaleString()} minutes</dd>
+    </dl>
+  `;
+
+  sectionEl.classList.remove('hidden');
+}
 
 /**
  * Wire up the "New Session" button with a two-step confirmation guard.
@@ -183,6 +231,7 @@ function initNewSessionBtn() {
 
       renderList();
       renderStatistics();
+      renderPrediction();
     }
   });
 }

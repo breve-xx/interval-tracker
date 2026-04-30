@@ -164,3 +164,24 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - `formatters.js`: 100 % statements, 100 % branches, 100 % functions, 100 % lines
 - **Overall: 99.01 % statements, 92.94 % branches — above ≥ 80 % mandate.**
 - All 130 tests pass (`npm test` exits 0).
+
+## TASK-0007: Prediction Engine & Display — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**Source**
+- Created `src/js/prediction.js`: exports `predictNext(occurrences)`. Imports `computeStatistics` internally. Strategy selection: `trend === 'stable'` + very/regular → `'mean'`; stable + irregular/highly irregular → `'median'`; trending → `'regression'` (slope × N_intervals + intercept, clamped to ≥ 1 minute). Confidence score formula: `clamp(round(max(0, 100 − cv) + min(10, (count−2)×2) − (outlierCount/intervalCount)×30), 0, 100)`. Confidence labels: ≥ 75 → `'high'`, 40–74 → `'moderate'`, < 40 → `'low'`. Window: predicted ± 1 stdDev in ms; `earliestDate` clamped to `lastTimestamp + 1ms`. Returns `{ predictedDate, earliestDate, latestDate, confidence, confidenceLabel, strategy, intervalUsedMs }` (all dates as ISO strings).
+- Updated `src/js/uiController.js`: added `import { predictNext } from './prediction.js'`; added `renderPrediction()` which hides `#prediction-section` when result is null, otherwise renders predicted date, window, confidence score/label, strategy, and interval used (in minutes) as a `<dl>`; wired `renderPrediction()` into `renderList()` (both the empty and populated paths) and the New Session confirm handler.
+- Updated `src/index.html`: added `<section id="prediction-section" class="hidden">` with `<div id="prediction-output">` below `#statistics-section`.
+
+**Tests**
+- Created `tests/unit/prediction.test.js`: 27 tests across guard conditions, strategy selection, predicted date properties, confidence score, confidence label, confidence window ordering/clamping, and regression interval clamping. Fixed the `IRREGULAR` dataset (was alternating 1d/30d which produced a positive regression slope; replaced with symmetric `[30d, 1d, 1d, 30d]` yielding slope = 0 and CV ≈ 93 % → truly "highly irregular + stable").
+
+### Final Coverage (2026-04-30)
+- `prediction.js`: 93.47 % statements, 84.21 % branches, 100 % functions, 95 % lines
+- `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
+- `dataService.js`: 95.23 % statements, 87.5 % branches, 100 % functions
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- `formatters.js`: 100 % statements, 100 % branches, 100 % functions, 100 % lines
+- **Overall: 98 % statements, 91.34 % branches — above ≥ 80 % mandate.**
+- All 157 tests pass (`npm test` exits 0).
