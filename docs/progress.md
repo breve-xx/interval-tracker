@@ -141,3 +141,26 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - `formatters.js`: 100 % statements, 100 % branches, 100 % functions, 100 % lines
 - **Overall: 97.91 % statements, 88.37 % branches — above ≥ 80 % mandate.**
 - All 87 tests pass (`npm test` exits 0).
+
+## TASK-0006: Statistics Engine — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**Source**
+- Created `src/js/statistics.js`: exports `computeStatistics(occurrences)`. Accepts ISO strings or Date objects; returns `null` for fewer than 2 occurrences. Returns `{ unit, count, basic, advanced, nerd }` with all interval values pre-scaled to the auto-selected unit (days / hours / minutes based on median interval). Internal helpers: `msToUnit`, `selectUnit`, `median`, `quartile`, `linearRegression`, `r2Score`.
+  - **Basic**: `intervalCount`, `mean`, `min`, `max`, `range`, `first`, `last`, `totalSpan`.
+  - **Advanced**: `median`, `stdDev`, `variance`, `cv`, `regularityLabel` (very regular / regular / irregular / highly irregular), `q1`, `q3`, `iqr`, `trend` (increasing / decreasing / stable via linear regression slope threshold of 5% of mean).
+  - **Nerd**: `mad`, `skewness`, `kurtosis`, `outliers` (Tukey fences), `outlierCount`, `longestStreak`, `regressionSlope`, `regressionIntercept`, `r2`.
+- Updated `src/js/uiController.js`: added `renderStatistics()` which calls `computeStatistics`, hides `#statistics-section` when result is null, otherwise renders three `<div>` subsections (Basic / Advanced / Nerd) each with a `<dl>` of key–value pairs. `renderStatistics()` is called from `renderList()` and the New Session reset. Added `computeStatistics` import.
+- Updated `src/index.html`: added `<section id="statistics-section" class="hidden">` with `<div id="statistics-output">` below `#occurrences-section`.
+
+**Tests**
+- Created `tests/unit/statistics.test.js`: 43 tests across guard conditions, unit selection, basic level, advanced level (spread, trend, regularity labels), nerd level (mad, outliers, streaks, regression, r²), and skewness/kurtosis sign correctness. All use deterministic fixed datasets.
+
+### Final Coverage (2026-04-30)
+- `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
+- `dataService.js`: 95.23 % statements, 87.5 % branches, 100 % functions
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- `formatters.js`: 100 % statements, 100 % branches, 100 % functions, 100 % lines
+- **Overall: 99.01 % statements, 92.94 % branches — above ≥ 80 % mandate.**
+- All 130 tests pass (`npm test` exits 0).

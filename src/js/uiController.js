@@ -8,6 +8,7 @@
 import { parseOccurrences } from './parser.js';
 import { loadRecords, addRecords, clearRecords } from './dataService.js';
 import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell } from './formatters.js';
+import { computeStatistics } from './statistics.js';
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 
@@ -70,10 +71,64 @@ export function renderList() {
   if (records.length === 0) {
     listEl.innerHTML = '';
     sectionEl.classList.add('hidden');
+    renderStatistics();
     return;
   }
 
   listEl.innerHTML = records.map(buildCardHTML).join('');
+  sectionEl.classList.remove('hidden');
+  renderStatistics();
+}
+
+// ─── Statistics Renderer ──────────────────────────────────────────────────────
+
+/**
+ * Build a <dl> of key/value pairs from a flat object.
+ *
+ * @param {object} obj
+ * @returns {string}  HTML string
+ */
+function buildDL(obj) {
+  return '<dl>' + Object.entries(obj).map(([k, v]) => {
+    const display = Array.isArray(v) ? (v.length === 0 ? '—' : v.join(', ')) : v;
+    return `<dt>${k}</dt><dd>${display}</dd>`;
+  }).join('') + '</dl>';
+}
+
+/**
+ * renderStatistics — Computes and renders the statistics section.
+ * Hides #statistics-section when fewer than 2 occurrences exist.
+ */
+export function renderStatistics() {
+  const sectionEl = getEl('statistics-section');
+  const outputEl  = getEl('statistics-output');
+  if (!sectionEl || !outputEl) return;
+
+  const result = computeStatistics(loadRecords());
+
+  if (!result) {
+    sectionEl.classList.add('hidden');
+    return;
+  }
+
+  const { unit, count, basic, advanced, nerd } = result;
+
+  outputEl.innerHTML = `
+    <p class="statistics-unit">Unit: <strong>${unit}</strong> &nbsp;·&nbsp; Occurrences: <strong>${count}</strong></p>
+    <div class="statistics-level">
+      <h3>Basic</h3>
+      ${buildDL(basic)}
+    </div>
+    <div class="statistics-level">
+      <h3>Advanced</h3>
+      ${buildDL(advanced)}
+    </div>
+    <div class="statistics-level">
+      <h3>Nerd</h3>
+      ${buildDL(nerd)}
+    </div>
+  `;
+
   sectionEl.classList.remove('hidden');
 }
 
@@ -127,6 +182,7 @@ function initNewSessionBtn() {
       clearFeedback();
 
       renderList();
+      renderStatistics();
     }
   });
 }
