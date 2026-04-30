@@ -289,7 +289,31 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
 - All 195 tests pass (`npm test` exits 0).
 
-## TASK-0011: Complete Application Layout Makeover — COMPLETED (2026-04-30)
+## TASK-0012: Self-Explaining Application — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**`docs/tasks/TASK-0012.md`** — created with full specification.
+
+**`src/index.html`**
+- Added `.how-it-works` ordered list inside `.onboard`, between the lead paragraph and the textarea label. Three steps: paste timestamps, see patterns, get a prediction.
+
+**`src/js/uiController.js`**
+- Added `STATS_GLOSSARY` constant: plain-English descriptions for all 19 statistics keys, organised under `basic`, `advanced`, and `nerd` sub-objects.
+- Added `STATS_LEVEL_DESC` constant: one-line description per level.
+- Added `STRATEGY_DESC` constant: description per prediction strategy (`mean`, `median`, `regression`).
+- Added `buildGlossaryPanel()`: builds the full three-section glossary HTML from `STATS_GLOSSARY` and `STATS_LEVEL_DESC`.
+- Updated `renderStatistics()`: added Explain button, level descriptions per panel, glossary panel toggle.
+- Updated `renderPrediction()`: added `.pred-field-desc` below confidence badge, window row, and strategy chips.
+
+**`src/css/styles.css`**
+- Added `.how-it-works`, `.stats-help-btn`, `.stats-level-desc`, `.stats-help-panel`, glossary components, and `.pred-field-desc`.
+- Responsive: glossary grid collapses to single column on mobile.
+
+### Final Coverage (2026-04-30)
+- All business-logic modules unchanged.
+- **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
+- All 195 tests pass (`npm test` exits 0). — COMPLETED (2026-04-30)
 
 ### Actions Taken
 

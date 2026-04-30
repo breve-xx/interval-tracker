@@ -26,6 +26,12 @@
         <h1 class="onboard__title">Interval Tracker</h1>
         <p class="onboard__lead">Paste timestamps, discover patterns, predict what comes next.</p>
 
+        <ol class="how-it-works">
+          <li><strong>Paste your timestamps</strong> — one per line, or comma / semicolon separated. Any common date-time format works.</li>
+          <li><strong>See the patterns</strong> — mean interval, variance, trend direction, regularity, and more.</li>
+          <li><strong>Get a prediction</strong> — the app estimates when the next occurrence is due and how confident it is.</li>
+        </ol>
+
         <label class="onboard__label" for="occurrence-input">
           Paste your occurrences — one per line, or comma / semicolon separated:
         </label>
@@ -35,19 +41,19 @@
           placeholder="e.g.&#10;2024-03-15 14:30:00&#10;2024-04-02T09:15:00&#10;15/05/2024 18:00"
           spellcheck="false"
         ></textarea>
-        <button id="submit-occurrences" type="button" class="btn btn--primary">
-          <i data-lucide="play"></i>
-          Start Tracking
-        </button>
-        <p id="input-feedback" role="status" aria-live="polite" class="feedback"></p>
-
-        <div class="import-row">
-          <label for="import-file-input" class="import-label">
+        <div class="onboard__actions">
+          <button id="submit-occurrences" type="button" class="btn btn--primary">
+            <i data-lucide="play"></i>
+            Start Tracking
+          </button>
+          <span class="onboard__actions-or">or</span>
+          <button type="button" id="load-session-btn" class="btn btn--secondary">
             <i data-lucide="folder-open"></i>
-            Load a saved session:
-          </label>
-          <input type="file" id="import-file-input" accept=".json,application/json" />
+            Load saved session
+          </button>
+          <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
         </div>
+        <p id="input-feedback" role="status" aria-live="polite" class="feedback"></p>
         <p id="import-feedback" role="status" aria-live="polite" class="feedback"></p>
       </div>
     </section>

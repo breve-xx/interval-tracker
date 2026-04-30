@@ -30,6 +30,65 @@ import { computeStatistics } from './statistics.js';
 import { predictNext } from './prediction.js';
 import { buildExportPayload, parseImportPayload, buildMarkdownReport } from './sessionIO.js';
 
+// ─── Static Explanatory Content ───────────────────────────────────────────────
+
+/**
+ * Plain-English descriptions for every statistics key, organised by level.
+ * Used to populate the expandable help panel in the statistics section.
+ */
+const STATS_GLOSSARY = {
+  basic: {
+    intervalCount : 'The number of gaps between consecutive occurrences.',
+    mean          : 'The average gap length — a typical interval between events.',
+    min           : 'The shortest gap observed between two consecutive occurrences.',
+    max           : 'The longest gap observed between two consecutive occurrences.',
+    range         : 'The difference between the longest and shortest gaps. Larger values indicate more variability.',
+    first         : 'The date and time of the earliest recorded occurrence.',
+    last          : 'The date and time of the most recent recorded occurrence.',
+    totalSpan     : 'Total time elapsed from the first to the last occurrence.',
+  },
+  advanced: {
+    median        : 'The middle gap value when all gaps are sorted. More resistant to outliers than the mean.',
+    stdDev        : 'Standard deviation — how much gaps typically deviate from the mean. Lower = more consistent.',
+    variance      : 'The square of the standard deviation. A raw measure of how spread-out the gaps are.',
+    cv            : 'Coefficient of variation — standard deviation as a percentage of the mean. Below 15% is very regular; above 75% is highly irregular.',
+    regularityLabel: 'A plain-English summary of how consistent the intervals are, derived from the CV.',
+    q1            : 'First quartile — 25% of all gaps are shorter than this value.',
+    q3            : 'Third quartile — 75% of all gaps are shorter than this value.',
+    iqr           : 'Interquartile range (Q3 − Q1) — the spread of the middle 50% of gaps. Resistant to outliers.',
+    trend         : 'Whether gaps are growing longer (increasing), shorter (decreasing), or staying the same (stable).',
+  },
+  nerd: {
+    mad                : 'Mean absolute deviation — the average distance of each gap from the mean. A robust alternative to standard deviation.',
+    skewness           : 'Asymmetry of the distribution. Positive = occasional very long gaps; negative = occasional very short ones.',
+    kurtosis           : 'Excess kurtosis — how heavy the tails of the distribution are compared to a normal bell curve.',
+    outliers           : 'Gap values that fall far outside the typical range (beyond 1.5× IQR from Q1 or Q3).',
+    outlierCount       : 'The number of gaps identified as statistical outliers.',
+    longestStreak      : 'The longest consecutive run of gaps all within one standard deviation of the mean.',
+    regressionSlope    : 'Rate of change in gap length per occurrence. Positive = gaps are growing; negative = gaps are shrinking.',
+    regressionIntercept: 'The estimated gap length at occurrence zero — the starting point of the regression line.',
+    r2                 : 'R² score — how well the trend line fits. Near 1 = strong trend; near 0 = no discernible trend.',
+  },
+};
+
+/**
+ * One-line descriptions for each statistical analysis level.
+ */
+const STATS_LEVEL_DESC = {
+  basic   : 'Core descriptive statistics about the gaps between your occurrences.',
+  advanced: 'Distribution shape, consistency, and long-term trend of your intervals.',
+  nerd    : 'High-precision measures: regression fit, outlier detection, and distribution shape.',
+};
+
+/**
+ * Plain-English description for each prediction strategy.
+ */
+const STRATEGY_DESC = {
+  mean      : 'Projects from the last occurrence using the average gap. Best for very consistent patterns.',
+  median    : 'Projects using the median gap — more robust when a few unusual intervals exist.',
+  regression: 'Fits a trend line to the interval series and extrapolates. Used when gaps are clearly growing or shrinking.',
+};
+
 // ─── DOM References ───────────────────────────────────────────────────────────
 
 function getEl(id) {
@@ -65,8 +124,15 @@ function humaniseKey(key) {
 }
 
 /**
+ * Regex that matches an ISO 8601 datetime string produced by Date#toISOString().
+ * Used in fmtVal to pretty-print date values in statistics tiles.
+ */
+const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
+/**
  * Format a statistics value for display.
  * Numbers are rounded to 2 decimal places. Arrays are comma-joined or "—".
+ * ISO datetime strings are formatted as "DD/MM/YYYY HH:mm".
  *
  * @param {*} v
  * @returns {string}
@@ -75,6 +141,10 @@ function fmtVal(v) {
   if (Array.isArray(v)) {
     if (v.length === 0) return '—';
     return v.map((n) => (typeof n === 'number' ? round2(n) : n)).join(', ');
+  }
+  if (typeof v === 'string' && ISO_DATETIME_RE.test(v)) {
+    const d = new Date(v);
+    return `${formatOccurrenceDate(d)} ${formatOccurrenceTime(d)}`;
   }
   if (typeof v === 'number') return String(round2(v));
   return String(v);
@@ -234,18 +304,57 @@ export function renderList() {
 // ─── Statistics Renderer ──────────────────────────────────────────────────────
 
 /**
+ * Keys in the statistics output whose values are ISO datetime strings and
+ * should be rendered as two stacked lines (date + time) in the stats tile.
+ */
+const DATETIME_STAT_KEYS = new Set(['first', 'last']);
+
+/**
  * Build a stats-grid of tiles from a plain object.
+ * Keys in DATETIME_STAT_KEYS are rendered as two stacked date/time lines.
  *
  * @param {object} obj
  * @returns {string}  HTML string
  */
 function buildStatsGrid(obj) {
-  const tiles = Object.entries(obj).map(([k, v]) => `
+  const tiles = Object.entries(obj).map(([k, v]) => {
+    let valueHtml;
+    if (DATETIME_STAT_KEYS.has(k) && typeof v === 'string' && ISO_DATETIME_RE.test(v)) {
+      const d = new Date(v);
+      valueHtml = `<span class="stats-tile__dt-date">${formatOccurrenceDate(d)}</span><span class="stats-tile__dt-time">${formatOccurrenceTime(d)}</span>`;
+    } else {
+      valueHtml = fmtVal(v);
+    }
+    const label = humaniseKey(k);
+    return `
     <div class="stats-tile">
-      <span class="stats-tile__label">${humaniseKey(k)}</span>
-      <span class="stats-tile__value">${fmtVal(v)}</span>
-    </div>`).join('');
+      <span class="stats-tile__label" title="${label}">${label}</span>
+      <span class="stats-tile__value">${valueHtml}</span>
+    </div>`;
+  }).join('');
   return `<div class="stats-grid">${tiles}</div>`;
+}
+
+/**
+ * Build the full glossary panel HTML from STATS_GLOSSARY.
+ *
+ * @returns {string}  HTML string
+ */
+function buildGlossaryPanel() {
+  const sections = ['basic', 'advanced', 'nerd'].map((level) => {
+    const items = Object.entries(STATS_GLOSSARY[level]).map(([k, desc]) => `
+      <div class="glossary-item">
+        <dt class="glossary-item__term">${humaniseKey(k)}</dt>
+        <dd class="glossary-item__def">${desc}</dd>
+      </div>`).join('');
+    return `
+      <div class="glossary-section">
+        <h4 class="glossary-section__title">${level.charAt(0).toUpperCase() + level.slice(1)}</h4>
+        <p class="glossary-section__desc">${STATS_LEVEL_DESC[level]}</p>
+        <dl class="glossary-list">${items}</dl>
+      </div>`;
+  }).join('');
+  return `<div class="stats-help-panel hidden" id="stats-help-panel">${sections}</div>`;
 }
 
 /**
@@ -270,15 +379,29 @@ export function renderStatistics() {
     <div class="stats-header">
       <i data-lucide="bar-chart-2"></i>
       <span>Unit: <strong>${unit}</strong> &nbsp;·&nbsp; <strong>${count}</strong> occurrences</span>
+      <button class="stats-help-btn" id="stats-help-btn" type="button">
+        <i data-lucide="circle-help"></i>
+        Explain
+      </button>
     </div>
     <div class="stats-tabbar" role="tablist">
       <button class="stats-tab is-active" data-tab="basic" type="button">Basic</button>
       <button class="stats-tab" data-tab="advanced" type="button">Advanced</button>
       <button class="stats-tab" data-tab="nerd" type="button">Nerd</button>
     </div>
-    <div class="stats-panel is-active" data-panel="basic">${buildStatsGrid(basic)}</div>
-    <div class="stats-panel" data-panel="advanced">${buildStatsGrid(advanced)}</div>
-    <div class="stats-panel" data-panel="nerd">${buildStatsGrid(nerd)}</div>
+    <div class="stats-panel is-active" data-panel="basic">
+      <p class="stats-level-desc">${STATS_LEVEL_DESC.basic}</p>
+      ${buildStatsGrid(basic)}
+    </div>
+    <div class="stats-panel" data-panel="advanced">
+      <p class="stats-level-desc">${STATS_LEVEL_DESC.advanced}</p>
+      ${buildStatsGrid(advanced)}
+    </div>
+    <div class="stats-panel" data-panel="nerd">
+      <p class="stats-level-desc">${STATS_LEVEL_DESC.nerd}</p>
+      ${buildStatsGrid(nerd)}
+    </div>
+    ${buildGlossaryPanel()}
   `;
 
   // Tab switching
@@ -292,6 +415,17 @@ export function renderStatistics() {
       if (panel) panel.classList.add('is-active');
     });
   });
+
+  // Help panel toggle
+  const helpBtn   = getEl('stats-help-btn');
+  const helpPanel = getEl('stats-help-panel');
+  if (helpBtn && helpPanel) {
+    helpBtn.addEventListener('click', () => {
+      const isOpen = !helpPanel.classList.contains('hidden');
+      helpPanel.classList.toggle('hidden', isOpen);
+      helpBtn.classList.toggle('is-active', !isOpen);
+    });
+  }
 
   sectionEl.classList.remove('hidden');
   refreshIcons();
@@ -329,6 +463,13 @@ export function renderPrediction() {
   const timeFmt  = (d) => formatOccurrenceTime(d);
   const cfClass  = confidenceClass(confidence);
   const minutes  = Math.round(intervalUsedMs / 60_000).toLocaleString();
+  const stratDesc = STRATEGY_DESC[strategy] ?? '';
+
+  const confidenceDesc = cfClass === 'high'
+    ? `High confidence (≥70 %) — historical intervals are very consistent, so the estimate is likely accurate.`
+    : cfClass === 'medium'
+      ? `Moderate confidence (40–69 %) — some variability in your intervals; treat the window as a rough guide.`
+      : `Low confidence (<40 %) — intervals are irregular, so the prediction may be off by a significant margin.`;
 
   outputEl.innerHTML = `
     <div class="pred-hero">
@@ -341,16 +482,19 @@ export function renderPrediction() {
           ${confidence}% &mdash; ${label}
         </span>
       </div>
+      <p class="pred-field-desc">${confidenceDesc}</p>
       <div class="pred-hero__window">
         <i data-lucide="calendar-range"></i>
         <span>${dateFmt(earliest)} ${timeFmt(earliest)}</span>
         <span class="pred-hero__arrow">&#8594;</span>
         <span>${dateFmt(latest)} ${timeFmt(latest)}</span>
       </div>
+      <p class="pred-field-desc">Likely window — the range within which the next occurrence is most expected to fall (± one standard deviation).</p>
       <div class="pred-hero__chips">
-        <span class="chip"><i data-lucide="zap"></i>${strategy}</span>
-        <span class="chip"><i data-lucide="timer"></i>${minutes}&thinsp;min</span>
+        <span class="chip"><i data-lucide="zap"></i><span class="chip__label">Strategy:</span> ${strategy}</span>
+        <span class="chip"><i data-lucide="timer"></i><span class="chip__label">Interval used:</span> ${minutes}&thinsp;min</span>
       </div>
+      <p class="pred-field-desc">${stratDesc}</p>
     </div>
   `;
 
@@ -640,8 +784,12 @@ export function initUI() {
   const reportBtn = getEl('download-report-btn');
   if (reportBtn) reportBtn.addEventListener('click', handleDownloadReport);
 
-  // Import
+  // Import — styled button triggers the hidden file input
   const importInput = getEl('import-file-input');
+  const loadBtn     = getEl('load-session-btn');
+  if (loadBtn && importInput) {
+    loadBtn.addEventListener('click', () => importInput.click());
+  }
   if (importInput) {
     importInput.addEventListener('change', (e) => {
       if (e.target.files && e.target.files[0]) handleImport(e.target.files[0]);

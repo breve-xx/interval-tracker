@@ -290,37 +290,18 @@ svg.lucide {
   box-shadow  : 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
-#submit-occurrences {
-  align-self : flex-start;
-  font-size  : 0.9rem;
-  padding    : 0.6rem 1.4rem;
+/* Actions row (Start Tracking / Load saved session) */
+.onboard__actions {
+  display    : flex;
+  align-items: center;
+  gap        : 0.75rem;
+  flex-wrap  : wrap;
 }
 
-/* Import row */
-.import-row {
-  display     : flex;
-  align-items : center;
-  gap         : 0.75rem;
-  flex-wrap   : wrap;
-  padding-top : 0.5rem;
-  border-top  : 1px solid var(--border);
-}
-
-.import-label {
-  display     : inline-flex;
-  align-items : center;
-  gap         : 0.35em;
-  font-size   : 0.85rem;
-  color       : var(--text-subtle);
-  cursor      : pointer;
-}
-.import-label svg { font-size: 0.9em; }
-
-#import-file-input {
-  font-size : 0.85rem;
-  color     : var(--text-muted);
-  flex      : 1;
-  min-width : 0;
+.onboard__actions-or {
+  font-size : 0.8rem;
+  color     : var(--text-subtle);
+  flex-shrink: 0;
 }
 
 /* ── Ops Bar (active-session) ──────────────────────────────────────────────── */
@@ -497,6 +478,7 @@ svg.lucide {
   font-weight      : 500;
 }
 .chip svg { font-size: 0.9em; color: var(--text-subtle); }
+.chip__label { color: var(--text-subtle); font-weight: 400; }
 
 /* ── Statistics ────────────────────────────────────────────────────────────── */
 
@@ -580,6 +562,26 @@ svg.lucide {
   color               : var(--text);
   font-variant-numeric: tabular-nums;
   word-break          : break-all;
+  display             : flex;
+  flex-direction      : column;
+  gap                 : 0.1rem;
+}
+
+/* Two-line date/time rendering for first/last tiles */
+.stats-tile__dt-date {
+  font-size  : 1rem;
+  font-weight: 600;
+  color      : var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+
+.stats-tile__dt-time {
+  font-size  : 0.8rem;
+  font-weight: 400;
+  color      : var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
 }
 
 /* ── Occurrences ───────────────────────────────────────────────────────────── */
@@ -682,6 +684,157 @@ svg.lucide {
   text-overflow: ellipsis;
 }
 
+/* ── Onboard "How it works" steps ──────────────────────────────────────────── */
+
+.how-it-works {
+  list-style    : none;
+  counter-reset : steps;
+  display       : flex;
+  flex-direction: column;
+  gap           : 0.6rem;
+  padding       : 0.875rem 1rem;
+  background-color: var(--bg-surface-2);
+  border        : 1px solid var(--border);
+  border-radius : var(--radius-sm);
+}
+
+.how-it-works li {
+  counter-increment: steps;
+  display           : flex;
+  align-items       : flex-start;
+  gap               : 0.75rem;
+  font-size         : 0.875rem;
+  color             : var(--text-muted);
+  line-height       : 1.5;
+}
+
+.how-it-works li::before {
+  content          : counter(steps);
+  display          : inline-flex;
+  align-items      : center;
+  justify-content  : center;
+  min-width        : 1.4em;
+  height           : 1.4em;
+  background-color : var(--accent);
+  color            : var(--accent-fg);
+  border-radius    : 50%;
+  font-size        : 0.7rem;
+  font-weight      : 700;
+  flex-shrink      : 0;
+  margin-top       : 0.1em;
+}
+
+.how-it-works li strong { color: var(--text); }
+
+/* ── Stats help button ─────────────────────────────────────────────────────── */
+
+.stats-help-btn {
+  display         : inline-flex;
+  align-items     : center;
+  gap             : 0.3em;
+  margin-left     : auto;
+  padding         : 0.3em 0.75em;
+  background      : none;
+  border          : 1px solid var(--border);
+  border-radius   : var(--radius-xs);
+  font-size       : 0.8rem;
+  font-weight     : 500;
+  color           : var(--text-muted);
+  cursor          : pointer;
+  transition      : background-color var(--transition), color var(--transition),
+                    border-color var(--transition);
+  white-space     : nowrap;
+  flex-shrink     : 0;
+}
+.stats-help-btn:hover {
+  background-color: var(--bg-surface-2);
+  color           : var(--text);
+}
+.stats-help-btn.is-active {
+  background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color    : var(--accent);
+  color           : var(--accent);
+}
+
+/* ── Stats level description ───────────────────────────────────────────────── */
+
+.stats-level-desc {
+  font-size     : 0.8rem;
+  color         : var(--text-subtle);
+  margin-bottom : 1rem;
+  line-height   : 1.5;
+}
+
+/* ── Stats help panel (glossary) ───────────────────────────────────────────── */
+
+.stats-help-panel {
+  margin-top      : 1.25rem;
+  padding         : 1.5rem;
+  background-color: var(--bg-surface);
+  border          : 1px solid var(--border);
+  border-radius   : var(--radius-sm);
+  display         : flex;
+  flex-direction  : column;
+  gap             : 2rem;
+}
+
+.glossary-section__title {
+  font-size     : 0.8rem;
+  font-weight   : 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color         : var(--text-subtle);
+  margin-bottom : 0.25rem;
+}
+
+.glossary-section__desc {
+  font-size     : 0.8rem;
+  color         : var(--text-muted);
+  margin-bottom : 0.875rem;
+  line-height   : 1.5;
+}
+
+.glossary-list {
+  display       : flex;
+  flex-direction: column;
+  gap           : 0.6rem;
+}
+
+.glossary-item {
+  display              : grid;
+  grid-template-columns: 11rem 1fr;
+  gap                  : 0.5rem 1rem;
+  align-items          : baseline;
+  padding-bottom       : 0.6rem;
+  border-bottom        : 1px solid var(--border);
+}
+.glossary-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+.glossary-item__term {
+  font-size  : 0.825rem;
+  font-weight: 600;
+  color      : var(--text);
+  white-space: nowrap;
+  overflow   : hidden;
+  text-overflow: ellipsis;
+}
+
+.glossary-item__def {
+  font-size  : 0.8rem;
+  color      : var(--text-muted);
+  line-height: 1.55;
+  margin     : 0;
+}
+
+/* ── Prediction field descriptions ─────────────────────────────────────────── */
+
+.pred-field-desc {
+  font-size  : 0.8rem;
+  color      : var(--text-subtle);
+  line-height: 1.5;
+  margin-top : -0.5rem;
+}
+
 /* ── Responsive ────────────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
@@ -725,4 +878,10 @@ svg.lucide {
   }
 
   .onboard__title { font-size: 1.5rem; }
+
+  .glossary-item {
+    grid-template-columns: 1fr;
+    gap                  : 0.2rem;
+  }
+  .glossary-item__term { white-space: normal; }
 }
