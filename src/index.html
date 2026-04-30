@@ -7,7 +7,25 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div id="app-container"></div>
+  <div id="app-container">
+    <h1>Interval Tracker</h1>
+
+    <section id="input-section">
+      <label for="occurrence-input">Paste occurrences (one per line, or comma/semicolon separated):</label>
+      <textarea
+        id="occurrence-input"
+        placeholder="e.g.&#10;2024-03-15 14:30:00&#10;2024-04-02T09:15:00&#10;15/05/2024 18:00"
+        spellcheck="false"
+      ></textarea>
+      <button id="submit-occurrences" type="button">Add Occurrences</button>
+      <p id="input-feedback" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="list-section">
+      <h2>Recorded Occurrences</h2>
+      <ul id="occurrence-list"></ul>
+    </section>
+  </div>
   <script type="module" src="js/script.js"></script>
 </body>
 </html>

@@ -1,0 +1,33 @@
+{
+  "name": "interval-tracker",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev":           "vite src/",
+    "test":          "vitest run",
+    "test:watch":    "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/breve-xx/interval-tracker.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/breve-xx/interval-tracker/issues"
+  },
+  "homepage": "https://github.com/breve-xx/interval-tracker#readme",
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.5",
+    "jsdom": "^29.1.0",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
+  }
+}
