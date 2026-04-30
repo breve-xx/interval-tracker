@@ -86,3 +86,41 @@ guarantees that calculations always reflect the current engine version, fulfilli
 
 **Version field**: a `version` integer allows future format migrations. The current
 importer must reject any file where `version !== 1` with a descriptive error.
+
+---
+
+## DEC-0005 — Glyph Library and Theme System (2026-04-30)
+
+**Decision**: The application uses **Lucide Icons** as its glyph library and a CSS custom-property-based **dual-theme system** (light / dark).
+
+### Glyph library
+
+**Lucide Icons** is loaded via CDN as a UMD bundle:
+
+```html
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+```
+
+Icons are declared anywhere in the HTML or in JS-generated innerHTML as:
+
+```html
+<i data-lucide="icon-name"></i>
+```
+
+After any DOM mutation that introduces icon placeholders, `uiController.js` calls `lucide.createIcons()` (guarded by `typeof lucide !== 'undefined'`) to replace the `<i>` elements with inline SVGs. A `refreshIcons()` helper wraps this call and is invoked at the end of every render function and in `initUI()`.
+
+**Rationale**: Lucide is MIT-licensed, tree-shakeable, and ships a UMD build that works without a build step. Inline SVG output means icons inherit CSS `color` and `font-size`, making theme switching trivial.
+
+### Theme system
+
+Two themes are supported: **light** (default) and **dark**.
+
+- All colour and shadow values are defined as CSS custom properties on `:root` (light values).
+- `[data-theme="dark"]` on `<html>` overrides those properties with dark values.
+- On initialisation `uiController.js` calls `initTheme()`, which:
+  1. Reads `localStorage.getItem('theme')`.
+  2. Falls back to `window.matchMedia('(prefers-color-scheme: dark)').matches` if no stored value.
+  3. Sets `document.documentElement.dataset.theme` to `'light'` or `'dark'`.
+  4. Wires the `#theme-toggle-btn` click: toggles the attribute, persists the new value to `localStorage`, and updates the toggle button icon via `refreshIcons()`.
+
+**Rationale**: CSS custom properties require no JavaScript for the actual theme switch — only a single attribute change on `<html>`. This is the most performant and simplest approach with no flash of unstyled content when the theme is initialised synchronously before first paint.

@@ -13,6 +13,14 @@
  *   - Export button triggers a JSON file download of the full session snapshot.
  *   - Import file input (no-session mode only) loads a v1 snapshot and replaces
  *     the current session with the imported occurrences.
+ *
+ * Theme (DEC-0005):
+ *   - Light/dark via data-theme on <html>. Initialised from localStorage or
+ *     prefers-color-scheme. Toggle button persists the choice.
+ *
+ * Icons (DEC-0005):
+ *   - Lucide icons loaded via CDN UMD. refreshIcons() calls lucide.createIcons()
+ *     after every DOM mutation that introduces icon placeholders.
  */
 
 import { parseOccurrences } from './parser.js';
@@ -28,53 +36,132 @@ function getEl(id) {
   return document.getElementById(id);
 }
 
-// ─── Feedback helpers ─────────────────────────────────────────────────────────
+// ─── Icon Helper ──────────────────────────────────────────────────────────────
 
 /**
- * Display a message in #input-feedback.
- *
- * @param {string} message
- * @param {'error'|'success'|''} type
+ * Materialise all pending <i data-lucide="…"> placeholders.
+ * Guarded against environments where the CDN script has not yet loaded
+ * (e.g. during unit tests).
  */
+function refreshIcons() {
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+// ─── Display Helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Convert a camelCase key to a human-readable Title Case label.
+ *
+ * @param {string} key  e.g. "intervalCount"
+ * @returns {string}    e.g. "Interval Count"
+ */
+function humaniseKey(key) {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (c) => c.toUpperCase())
+    .trim();
+}
+
+/**
+ * Format a statistics value for display.
+ * Numbers are rounded to 2 decimal places. Arrays are comma-joined or "—".
+ *
+ * @param {*} v
+ * @returns {string}
+ */
+function fmtVal(v) {
+  if (Array.isArray(v)) {
+    if (v.length === 0) return '—';
+    return v.map((n) => (typeof n === 'number' ? round2(n) : n)).join(', ');
+  }
+  if (typeof v === 'number') return String(round2(v));
+  return String(v);
+}
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+/**
+ * Map a confidence score to a CSS modifier class.
+ *
+ * @param {number} score  0–100
+ * @returns {'high'|'medium'|'low'}
+ */
+function confidenceClass(score) {
+  if (score >= 70) return 'high';
+  if (score >= 40) return 'medium';
+  return 'low';
+}
+
+// ─── Feedback Helpers ─────────────────────────────────────────────────────────
+
 function setFeedback(message, type = '') {
   const el = getEl('input-feedback');
   if (!el) return;
   el.textContent = message;
-  el.className = type;
+  el.className = `feedback${type ? ` ${type}` : ''}`;
 }
 
-function clearFeedback() {
-  setFeedback('', '');
-}
+function clearFeedback() { setFeedback('', ''); }
 
-/**
- * Display a message in #single-add-feedback.
- *
- * @param {string} message
- * @param {'error'|'success'|''} type
- */
 function setSingleFeedback(message, type = '') {
   const el = getEl('single-add-feedback');
   if (!el) return;
   el.textContent = message;
-  el.className = type;
+  el.className = `feedback ops-feedback${type ? ` ${type}` : ''}`;
 }
 
-function clearSingleFeedback() {
-  setSingleFeedback('', '');
-}
+function clearSingleFeedback() { setSingleFeedback('', ''); }
 
-/**
- * Display a message in #import-feedback.
- *
- * @param {string} message
- * @param {'error'|'success'|''} type
- */
 function setImportFeedback(message, type = '') {
   const el = getEl('import-feedback');
   if (!el) return;
   el.textContent = message;
-  el.className = type;
+  el.className = `feedback${type ? ` ${type}` : ''}`;
+}
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+
+/**
+ * Initialise the theme from localStorage or prefers-color-scheme,
+ * then wire the toggle button.
+ */
+function initTheme() {
+  const root    = document.documentElement;
+  const stored  = localStorage.getItem('theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initial = stored || (prefersDark ? 'dark' : 'light');
+
+  root.dataset.theme = initial;
+  updateThemeBtn(initial);
+
+  const btn = getEl('theme-toggle-btn');
+  if (!btn) return;
+
+  btn.addEventListener('click', () => {
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    localStorage.setItem('theme', next);
+    updateThemeBtn(next);
+  });
+}
+
+/**
+ * Update the theme toggle button icon to reflect the current theme.
+ * In dark mode the button shows "sun" (click to go light).
+ * In light mode the button shows "moon" (click to go dark).
+ *
+ * @param {'light'|'dark'} theme
+ */
+function updateThemeBtn(theme) {
+  const btn = getEl('theme-toggle-btn');
+  if (!btn) return;
+  const icon = theme === 'dark' ? 'sun' : 'moon';
+  btn.innerHTML = `<i data-lucide="${icon}"></i>`;
+  refreshIcons();
 }
 
 // ─── Session Mode ─────────────────────────────────────────────────────────────
@@ -92,30 +179,32 @@ function applySessionMode(active) {
   if (singleSection) singleSection.classList.toggle('hidden', !active);
 }
 
-// ─── Card Renderer ────────────────────────────────────────────────────────────
+// ─── Occurrence Row Renderer ──────────────────────────────────────────────────
 
 /**
- * Build the inner HTML for a single occurrence card.
+ * Build the inner HTML for a single slim occurrence row.
  *
  * @param {string} iso  UTC ISO 8601 string
+ * @param {number} idx  1-based index
  * @returns {string}    HTML string for an <li> element
  */
-function buildCardHTML(iso) {
+function buildCardHTML(iso, idx) {
   const d    = new Date(iso);
   const date = formatOccurrenceDate(d);
   const time = formatOccurrenceTime(d);
   const tell = formatOccurrenceTell(d);
-  return `<li class="occurrence-card" data-iso="${iso}">
-  <div class="occurrence-card__primary">
-    <span class="occurrence-card__date">${date}</span>
-    <span class="occurrence-card__time">${time}</span>
-  </div>
-  <p class="occurrence-card__tell">${tell}</p>
+  return `<li class="occ-row" data-iso="${iso}">
+  <span class="occ-row__num">${idx}</span>
+  <span class="occ-row__datetime">
+    <span class="occ-row__date">${date}</span>
+    <span class="occ-row__time">${time}</span>
+  </span>
+  <span class="occ-row__tell">${tell}</span>
 </li>`;
 }
 
 /**
- * renderList — Loads all persisted records and renders them as occurrence cards.
+ * renderList — Loads all persisted records and renders them as occurrence rows.
  * Toggles #occurrences-section visibility based on whether records exist.
  * Always applies the correct session mode.
  */
@@ -135,29 +224,32 @@ export function renderList() {
     return;
   }
 
-  listEl.innerHTML = records.map(buildCardHTML).join('');
+  listEl.innerHTML = records.map((iso, i) => buildCardHTML(iso, i + 1)).join('');
   sectionEl.classList.remove('hidden');
   renderStatistics();
   renderPrediction();
+  refreshIcons();
 }
 
 // ─── Statistics Renderer ──────────────────────────────────────────────────────
 
 /**
- * Build a <dl> of key/value pairs from a flat object.
+ * Build a stats-grid of tiles from a plain object.
  *
  * @param {object} obj
  * @returns {string}  HTML string
  */
-function buildDL(obj) {
-  return '<dl>' + Object.entries(obj).map(([k, v]) => {
-    const display = Array.isArray(v) ? (v.length === 0 ? '—' : v.join(', ')) : v;
-    return `<dt>${k}</dt><dd>${display}</dd>`;
-  }).join('') + '</dl>';
+function buildStatsGrid(obj) {
+  const tiles = Object.entries(obj).map(([k, v]) => `
+    <div class="stats-tile">
+      <span class="stats-tile__label">${humaniseKey(k)}</span>
+      <span class="stats-tile__value">${fmtVal(v)}</span>
+    </div>`).join('');
+  return `<div class="stats-grid">${tiles}</div>`;
 }
 
 /**
- * renderStatistics — Computes and renders the statistics section.
+ * renderStatistics — Computes and renders the statistics section with tabs.
  * Hides #statistics-section when fewer than 2 occurrences exist.
  */
 export function renderStatistics() {
@@ -175,28 +267,40 @@ export function renderStatistics() {
   const { unit, count, basic, advanced, nerd } = result;
 
   outputEl.innerHTML = `
-    <p class="statistics-unit">Unit: <strong>${unit}</strong> &nbsp;·&nbsp; Occurrences: <strong>${count}</strong></p>
-    <div class="statistics-level">
-      <h3>Basic</h3>
-      ${buildDL(basic)}
+    <div class="stats-header">
+      <i data-lucide="bar-chart-2"></i>
+      <span>Unit: <strong>${unit}</strong> &nbsp;·&nbsp; <strong>${count}</strong> occurrences</span>
     </div>
-    <div class="statistics-level">
-      <h3>Advanced</h3>
-      ${buildDL(advanced)}
+    <div class="stats-tabbar" role="tablist">
+      <button class="stats-tab is-active" data-tab="basic" type="button">Basic</button>
+      <button class="stats-tab" data-tab="advanced" type="button">Advanced</button>
+      <button class="stats-tab" data-tab="nerd" type="button">Nerd</button>
     </div>
-    <div class="statistics-level">
-      <h3>Nerd</h3>
-      ${buildDL(nerd)}
-    </div>
+    <div class="stats-panel is-active" data-panel="basic">${buildStatsGrid(basic)}</div>
+    <div class="stats-panel" data-panel="advanced">${buildStatsGrid(advanced)}</div>
+    <div class="stats-panel" data-panel="nerd">${buildStatsGrid(nerd)}</div>
   `;
 
+  // Tab switching
+  outputEl.querySelectorAll('.stats-tab').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.tab;
+      outputEl.querySelectorAll('.stats-tab').forEach((t) => t.classList.remove('is-active'));
+      outputEl.querySelectorAll('.stats-panel').forEach((p) => p.classList.remove('is-active'));
+      tab.classList.add('is-active');
+      const panel = outputEl.querySelector(`[data-panel="${target}"]`);
+      if (panel) panel.classList.add('is-active');
+    });
+  });
+
   sectionEl.classList.remove('hidden');
+  refreshIcons();
 }
 
 // ─── Prediction Renderer ──────────────────────────────────────────────────────
 
 /**
- * renderPrediction — Computes and renders the prediction section.
+ * renderPrediction — Computes and renders the prediction hero card.
  * Hides #prediction-section when fewer than 2 occurrences exist.
  */
 export function renderPrediction() {
@@ -221,23 +325,37 @@ export function renderPrediction() {
   const earliest  = new Date(earliestDate);
   const latest    = new Date(latestDate);
 
-  const isoPredicted = `${formatOccurrenceDate(predicted)} ${formatOccurrenceTime(predicted)}`;
-  const isoEarliest  = `${formatOccurrenceDate(earliest)} ${formatOccurrenceTime(earliest)}`;
-  const isoLatest    = `${formatOccurrenceDate(latest)} ${formatOccurrenceTime(latest)}`;
+  const dateFmt  = (d) => formatOccurrenceDate(d);
+  const timeFmt  = (d) => formatOccurrenceTime(d);
+  const cfClass  = confidenceClass(confidence);
+  const minutes  = Math.round(intervalUsedMs / 60_000).toLocaleString();
 
   outputEl.innerHTML = `
-    <p class="prediction-tell">${formatOccurrenceTell(predicted)}</p>
-    <dl class="prediction-details">
-      <dt>Predicted date</dt><dd>${isoPredicted}</dd>
-      <dt>Window (earliest)</dt><dd>${isoEarliest}</dd>
-      <dt>Window (latest)</dt><dd>${isoLatest}</dd>
-      <dt>Confidence</dt><dd>${confidence}% — <strong>${label}</strong></dd>
-      <dt>Strategy</dt><dd>${strategy}</dd>
-      <dt>Interval used</dt><dd>${Math.round(intervalUsedMs / 60_000).toLocaleString()} minutes</dd>
-    </dl>
+    <div class="pred-hero">
+      <p class="pred-hero__label"><i data-lucide="target"></i> Next predicted occurrence</p>
+      <p class="pred-hero__tell">${formatOccurrenceTell(predicted)}</p>
+      <div class="pred-hero__primary">
+        <span class="pred-hero__date">${dateFmt(predicted)}</span>
+        <span class="pred-hero__time">${timeFmt(predicted)}</span>
+        <span class="confidence-badge confidence-badge--${cfClass}">
+          ${confidence}% &mdash; ${label}
+        </span>
+      </div>
+      <div class="pred-hero__window">
+        <i data-lucide="calendar-range"></i>
+        <span>${dateFmt(earliest)} ${timeFmt(earliest)}</span>
+        <span class="pred-hero__arrow">&#8594;</span>
+        <span>${dateFmt(latest)} ${timeFmt(latest)}</span>
+      </div>
+      <div class="pred-hero__chips">
+        <span class="chip"><i data-lucide="zap"></i>${strategy}</span>
+        <span class="chip"><i data-lucide="timer"></i>${minutes}&thinsp;min</span>
+      </div>
+    </div>
   `;
 
   sectionEl.classList.remove('hidden');
+  refreshIcons();
 }
 
 // ─── New Session Handler ──────────────────────────────────────────────────────
@@ -251,14 +369,15 @@ function initNewSessionBtn() {
   const btn = getEl('new-session-btn');
   if (!btn) return;
 
-  const originalLabel  = btn.textContent;
-  const confirmLabel   = 'Confirm — this will erase all data';
+  const originalLabel  = btn.innerHTML;
+  const confirmLabel   = '<i data-lucide="alert-triangle"></i><span>Confirm — this will erase all data</span>';
   let   pendingConfirm = false;
 
   function cancelConfirm() {
-    pendingConfirm       = false;
-    btn.textContent      = originalLabel;
+    pendingConfirm  = false;
+    btn.innerHTML   = originalLabel;
     btn.classList.remove('new-session-btn--confirm');
+    refreshIcons();
   }
 
   function handleOutsideClick(e) {
@@ -270,31 +389,27 @@ function initNewSessionBtn() {
 
   btn.addEventListener('click', () => {
     if (!pendingConfirm) {
-      // First click: enter confirmation state
-      pendingConfirm      = true;
-      btn.textContent     = confirmLabel;
+      pendingConfirm = true;
+      btn.innerHTML  = confirmLabel;
       btn.classList.add('new-session-btn--confirm');
-      // Next click anywhere outside the button cancels
+      refreshIcons();
       setTimeout(() => {
         document.addEventListener('click', handleOutsideClick);
       }, 0);
     } else {
-      // Second click on button: confirm and execute
       document.removeEventListener('click', handleOutsideClick);
       cancelConfirm();
       clearRecords();
 
-      // Reset batch input area
       const inputEl = getEl('occurrence-input');
       if (inputEl) inputEl.value = '';
       clearFeedback();
 
-      // Reset single-add area
       const singleEl = getEl('single-occurrence-input');
       if (singleEl) singleEl.value = '';
       clearSingleFeedback();
 
-      renderList();         // calls applySessionMode(false) internally
+      renderList();
       renderStatistics();
       renderPrediction();
     }
@@ -335,8 +450,8 @@ function handleSingleAdd() {
     return;
   }
 
-  const newIso   = valid[0].toISOString();
-  const lastIso  = getLastRecord();
+  const newIso  = valid[0].toISOString();
+  const lastIso = getLastRecord();
 
   if (lastIso !== null && newIso <= lastIso) {
     const lastDate = new Date(lastIso);
@@ -433,7 +548,6 @@ function handleImport(file) {
       return;
     }
 
-    // Replace session: clear existing data then add imported occurrences
     clearRecords();
     addRecords(result.occurrences.map((iso) => new Date(iso)));
 
@@ -498,12 +612,13 @@ function handleSubmit() {
  * Must be called after the DOM is ready.
  */
 export function initUI() {
+  initTheme();
+
   const btn = getEl('submit-occurrences');
   if (btn) {
     btn.addEventListener('click', handleSubmit);
   }
 
-  // Also allow submitting via Enter key inside the textarea (Shift+Enter = newline)
   const inputEl = getEl('occurrence-input');
   if (inputEl) {
     inputEl.addEventListener('keydown', (e) => {
@@ -534,4 +649,5 @@ export function initUI() {
   }
 
   renderList();   // applies the correct session mode on page load
+  refreshIcons();
 }

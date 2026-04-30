@@ -288,3 +288,48 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
 - **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
 - All 195 tests pass (`npm test` exits 0).
+
+## TASK-0011: Complete Application Layout Makeover — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**`docs/decisions.md`**
+- Added DEC-0005 logging the Lucide Icons CDN glyph library choice and the CSS custom-property dual-theme system (light/dark).
+
+**`src/index.html`** — restructured:
+- Added Google Fonts `<link>` for **Inter** (400–700).
+- Added `<header class="app-header">` with brand text and `#theme-toggle-btn`.
+- No-session state wrapped in a `.onboard` card with a clear title, lead line, textarea, CTA button, and an understated import row.
+- Active-session `#single-add-section` converted to an **ops bar** containing the single-add input+button on the left and New Session / Export / Report action buttons on the right (`.session-actions` removed from `#occurrences-details`).
+- `#occurrences-details` starts **closed** (no `open` attribute).
+- Section order: ops bar → prediction → statistics → occurrences.
+- Lucide CDN UMD `<script>` added before `</body>`.
+- Icons declared as `<i data-lucide="name">` throughout.
+
+**`src/css/styles.css`** — full rewrite:
+- CSS custom properties for light palette on `:root`; dark palette override on `[data-theme="dark"]`.
+- Shared button system: `.btn--primary`, `.btn--secondary`, `.btn--ghost`, `.icon-btn`.
+- `.onboard` centered card for the no-session state.
+- `.ops-bar` horizontal strip with flex wrap for the active-session controls.
+- `.pred-hero` large surface card: display-size tell text, date+time pair, `.confidence-badge` color-coded by level (high/medium/low), window range with icon, secondary `.chip` elements for strategy and interval.
+- Statistics: `.stats-tabbar` + `.stats-tab` (accent underline on active) + `.stats-panel` (only active panel displayed) + `.stats-grid` auto-fill tile grid + `.stats-tile` (label/value stacked).
+- Occurrences: `<details>` custom summary with chevron icon, `.occ-row` slim three-column grid (index | date+time | tell).
+- `@media (max-width: 640px)` responsive overrides: ops bar stacks, prediction font scales down, stats grid collapses to two columns, occurrence rows reflow.
+
+**`src/js/uiController.js`** — updated:
+- New helpers: `refreshIcons()`, `humaniseKey(key)`, `fmtVal(v)`, `round2(n)`, `confidenceClass(score)`.
+- `initTheme()`: reads `localStorage`/`prefers-color-scheme`, sets `data-theme` on `<html>`, wires toggle button.
+- `updateThemeBtn(theme)`: swaps icon between `moon` and `sun`.
+- `buildCardHTML(iso, idx)` → slim `.occ-row` rows with 1-based index.
+- `renderList()`: passes index to `buildCardHTML`; calls `refreshIcons()`.
+- `buildStatsGrid(obj)`: renders `.stats-grid` of `.stats-tile` elements using `humaniseKey` + `fmtVal`.
+- `renderStatistics()`: emits stats-header, tabbar, three panels; wires tab click handlers; calls `refreshIcons()`.
+- `renderPrediction()`: emits `.pred-hero` card with all fields, confidence badge, window, chips; calls `refreshIcons()`.
+- `initNewSessionBtn()`: confirm label updated to use icon markup.
+- `initUI()`: calls `initTheme()` first, then full wiring as before; `refreshIcons()` at end.
+- Feedback class strings updated to preserve `.feedback` base class.
+
+### Final Coverage (2026-04-30)
+- All business-logic modules unchanged; coverage identical to TASK-0010.
+- **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
+- All 195 tests pass (`npm test` exits 0).
