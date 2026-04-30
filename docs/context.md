@@ -14,8 +14,14 @@ The primary objective is to allow users to submit an arbitrary number of datetim
 2. **Prediction of Next Occurrence**: The most critical function is to generate a high-confidence prediction regarding when the next event is likely to happen. The model/algorithm used must extrapolate from the historical data set to estimate a future date and time.
 
 ## Data Handling and Input
-*   **Input**: A list of datetime objects (e.g., `[datetime1, datetime2, ..., datetimeN]`).
-*   **Units**: Time differences should ideally be calculated and reported in consistent units (e.g., days, hours, or seconds, depending on the scale of event recurrence).
+*   **Input**: A list of datetime entries submitted as freeform text (e.g. pasted by the user). Each entry represents the occurrence time of the tracked event.
+*   **Homogeneity**: All entries within a single submission must use the same datetime format. Mixed-format submissions are rejected (see `docs/decisions.md` DEC-0002).
+*   **Supported formats**: The parser recognises multiple common datetime conventions, including:
+    *   ISO 8601: `2024-03-15T14:30:00`, `2024-03-15 14:30:00`, `2024-03-15`
+    *   European slash-separated with time: `15/03/2024 14:30`
+    *   European dot-separated with time: `15.03.2024 14:30`
+    *   Bulleted list with dot-time notation: `- 20/02/2026 - 15.10` (list marker prefix, date and time separated by ` - `, time written as HH.MM)
+*   **Units**: Time differences are calculated and reported in consistent units appropriate to the scale of recurrence (days, hours, or minutes).
 
 ## Technical Requirements and Scope
 *   The solution should focus heavily on time series analysis and predictive modeling (e.g., ARIMA, Exponential Smoothing, or simple statistical curve fitting, depending on the observed pattern).

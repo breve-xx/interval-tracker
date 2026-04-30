@@ -82,13 +82,21 @@ function handleSubmit() {
     return;
   }
 
-  const { valid, invalid } = parseOccurrences(rawText);
+  const { valid, invalid, homogeneous } = parseOccurrences(rawText);
 
   if (valid.length === 0) {
     const skipped = invalid.length
       ? `Unrecognised tokens: ${invalid.map((t) => `"${t}"`).join(', ')}`
       : 'No recognisable datetime values found.';
     setFeedback(`No valid occurrences could be parsed. ${skipped}`, 'error');
+    return;
+  }
+
+  if (!homogeneous) {
+    setFeedback(
+      'Mixed formats detected. All entries in a submission must use the same datetime format. Please check your input and try again.',
+      'error'
+    );
     return;
   }
 

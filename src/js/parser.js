@@ -3,69 +3,140 @@
  *
  * Exports a single function that accepts a raw string (e.g. pasted by the
  * user) and attempts to extract valid datetime occurrences from it.
+ *
+ * ## Format Registry
+ *
+ * Each handler exposes:
+ *   id      — stable string identifier; used as the homogeneity fingerprint.
+ *   detect  — fast predicate: returns true when this handler owns the token.
+ *   parse   — extracts a Date from the token, or returns null on failure.
+ *
+ * Handlers are tried in order; the first matching handler wins.
+ *
+ * ## Format Descriptions
+ *
+ * ### ISO handlers (year-first, run before the flexible handler)
+ *   iso-T     — "2024-03-15T14:30:00"
+ *   iso-space — "2024-03-15 14:30:00"
+ *   iso-date  — "2024-03-15"
+ *
+ * ### flexible (catch-all for day/month-first formats)
+ *   Matches any line containing:
+ *     (any prefix)
+ *     (1–2 digits) <any single char> (1–2 digits) <any single char> (4 digits)
+ *     (any multi-char separator)
+ *     (1–2 digits) <any single char> (2 digits)
+ *     [ <any single char> (2 digits) ]   ← optional seconds
+ *     (any suffix)
+ *
+ *   Day/month disambiguation (see docs/decisions.md DEC-0002):
+ *     d1 > 12  → d1 is day,   d2 is month
+ *     d2 > 12  → d2 is day,   d1 is month
+ *     both ≤ 12 → d1 is day,  d2 is month  (European-first default)
  */
+
+// ─── Format Handlers ──────────────────────────────────────────────────────────
+
+const FORMATS = [
+  {
+    // "2024-03-15T14:30:00"  or  "2024-03-15T14:30"
+    id: 'iso-T',
+    detect: (t) => /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(t),
+    parse(t) {
+      const d = new Date(t.trim());
+      return isNaN(d.getTime()) ? null : d;
+    },
+  },
+  {
+    // "2024-03-15 14:30:00"  or  "2024-03-15 14:30"
+    id: 'iso-space',
+    detect: (t) => /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(t),
+    parse(t) {
+      const d = new Date(t.trim().replace(' ', 'T'));
+      return isNaN(d.getTime()) ? null : d;
+    },
+  },
+  {
+    // "2024-03-15"
+    id: 'iso-date',
+    detect: (t) => /^\d{4}-\d{2}-\d{2}$/.test(t.trim()),
+    parse(t) {
+      const d = new Date(`${t.trim()}T00:00:00`);
+      return isNaN(d.getTime()) ? null : d;
+    },
+  },
+  {
+    // Flexible catch-all for day/month-first formats with arbitrary separators.
+    //
+    // Detection pattern (unanchored — ignores any prefix/suffix on the line):
+    //   \d{1,2} . \d{1,2} . \d{4} .+ \d{1,2} . \d{2}
+    //   └─ d1 ─┘   └─ d2 ─┘  └year┘     └─ HH ─┘  └MM┘
+    //
+    // Each "." matches exactly one arbitrary character (the separator).
+    // The ".+" between the year and the hour matches one-or-more characters
+    // (the date–time gap, which may be " - ", "T", "  ", etc.).
+    id: 'flexible',
+    detect: (t) => /\d{1,2}.\d{1,2}.\d{4}.+\d{1,2}.\d{2}/.test(t),
+    parse(t) {
+      // Non-greedy match so the date–time separator is consumed minimally,
+      // leaving the hour digits for the next capture group.
+      const m = t.match(
+        /(\d{1,2}).(\d{1,2}).(\d{4}).+?(\d{1,2}).(\d{2})(?:.(\d{2}))?/
+      );
+      if (!m) return null;
+
+      const [, raw1, raw2, year, hour, minute, second = '0'] = m;
+      const n1 = parseInt(raw1, 10);
+      const n2 = parseInt(raw2, 10);
+
+      // Resolve day/month ambiguity:
+      //   n1 > 12  → n1 must be the day  (months only go to 12)
+      //   n2 > 12  → n2 must be the day  (months only go to 12), so n1 is month
+      //   both ≤ 12 → default to n1 = day (European-first convention)
+      let day, month;
+      if (n1 > 12) {
+        day = raw1; month = raw2;
+      } else if (n2 > 12) {
+        day = raw2; month = raw1;
+      } else {
+        day = raw1; month = raw2;
+      }
+
+      return _buildDate(year, month, day, hour, minute, second);
+    },
+  },
+];
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Normalise a raw token string to improve the chances of `Date` parsing:
- *  - Replace common date separators (dots, slashes) so dd/MM/yyyy → dd-MM-yyyy
- *    but only when they look like date-parts (digits around them).
- *  - Collapse multiple whitespace characters.
- *  - Handle "T"-less ISO-style strings like "2024-03-15 14:30:00".
+ * Construct a Date from individual components, building an unambiguous
+ * local-time ISO string first so the JS engine cannot misinterpret the input.
  *
- * The function intentionally stays lightweight: it improves coverage without
- * trying to enumerate every locale format explicitly.
- *
- * @param {string} token
- * @returns {string}
+ * @param {string|number} year
+ * @param {string|number} month   1-based
+ * @param {string|number} day
+ * @param {string|number} hour
+ * @param {string|number} minute
+ * @param {string|number} second
+ * @returns {Date|null}
  */
-function normaliseToken(token) {
-  let t = token.trim();
-
-  // Collapse whitespace
-  t = t.replace(/\s+/g, ' ');
-
-  // Replace dot-separated dates: 15.03.2024 → 15-03-2024
-  // Only replace dots that are surrounded by digits to avoid hitting
-  // decimal numbers or ellipsis characters.
-  t = t.replace(/(\d)\.(\d)/g, '$1-$2');
-
-  // Normalise slash-separated dates: 15/03/2024 → 15-03-2024
-  t = t.replace(/(\d)\/(\d)/g, '$1-$2');
-
-  return t;
+function _buildDate(year, month, day, hour, minute, second) {
+  const iso =
+    `${String(year).padStart(4, '0')}-` +
+    `${String(month).padStart(2, '0')}-` +
+    `${String(day).padStart(2, '0')}T` +
+    `${String(hour).padStart(2, '0')}:` +
+    `${String(minute).padStart(2, '0')}:` +
+    `${String(second).padStart(2, '0')}`;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 /**
- * Attempt to detect and swap day/month for ambiguous dd-MM-yyyy strings
- * (where the native Date constructor would interpret them as MM-dd-yyyy).
- * Only reorders when the first numeric segment is > 12 (unambiguously a day).
- *
- * @param {string} token  Already normalised token.
- * @returns {string}  Possibly reordered token.
- */
-function reorderDayMonth(token) {
-  // Match: dd-MM-yyyy [HH:mm[:ss]] or dd-MM-yy ...
-  const match = token.match(
-    /^(\d{1,2})-(\d{1,2})-(\d{2,4})(.*)$/
-  );
-  if (!match) return token;
-
-  const [, part1, part2, year, rest] = match;
-  const d1 = parseInt(part1, 10);
-  const d2 = parseInt(part2, 10);
-
-  // If part1 > 12 it must be the day; reorder to yyyy-MM-dd for safe parsing.
-  if (d1 > 12) {
-    return `${year}-${part2.padStart(2, '0')}-${part1.padStart(2, '0')}${rest}`;
-  }
-
-  // Ambiguous (both ≤ 12): leave as-is and let the Date constructor handle it.
-  return token;
-}
-
-/**
- * Split raw input text into individual tokens.
- * Splits on: newlines, semicolons, commas, pipes.
+ * Split raw input text into individual tokens (one per line).
+ * Also splits on semicolons, commas, and pipes for inline lists.
+ * Empty tokens produced by consecutive delimiters are discarded.
  *
  * @param {string} rawText
  * @returns {string[]}
@@ -78,55 +149,66 @@ function tokenise(rawText) {
 }
 
 /**
- * Parse a single normalised token into a Date, or return null on failure.
+ * Match a single token against the format registry.
  *
- * @param {string} token  Raw (un-normalised) token.
- * @returns {Date|null}
+ * @param {string} token
+ * @returns {{ date: Date, formatId: string }|null}
  */
-function parseToken(token) {
-  const normalised = reorderDayMonth(normaliseToken(token));
-
-  const date = new Date(normalised);
-  if (!isNaN(date.getTime())) return date;
-
-  // Second attempt: if there's no time component add midnight so that date-only
-  // strings like "2024-03-15" are reliably parsed (some engines treat bare
-  // date strings as UTC midnight which is fine for us).
-  if (!/[\d]T[\d]|[\d] [\d]{1,2}:/.test(normalised)) {
-    const withTime = new Date(`${normalised}T00:00:00`);
-    if (!isNaN(withTime.getTime())) return withTime;
+function matchToken(token) {
+  for (const fmt of FORMATS) {
+    if (fmt.detect(token)) {
+      const date = fmt.parse(token);
+      if (date) return { date, formatId: fmt.id };
+      // detect matched but parse returned null → the token targets this format
+      // but is malformed (e.g. month=13). Do not fall through.
+      return null;
+    }
   }
-
   return null;
 }
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * parseOccurrences — Main export.
  *
- * Accepts a freeform string and returns two collections:
- *  - `valid`   — array of Date objects successfully parsed.
- *  - `invalid` — array of raw token strings that could not be parsed.
+ * Accepts a freeform string and returns:
+ *   valid       — Date objects successfully parsed.
+ *   invalid     — raw token strings that matched no known format.
+ *   homogeneous — true when all valid tokens share the same format id.
+ *                 Single-token and all-invalid inputs are trivially true.
+ *   formatId    — the detected format id, or null when there are no valid
+ *                 tokens or when formats are mixed.
+ *
+ * When homogeneous is false, valid still contains the parsed dates so the
+ * caller can inspect them, but the submission must be rejected without
+ * persisting (enforced in uiController per DEC-0002).
  *
  * @param {string} rawText
- * @returns {{ valid: Date[], invalid: string[] }}
+ * @returns {{ valid: Date[], invalid: string[], homogeneous: boolean, formatId: string|null }}
  */
 export function parseOccurrences(rawText) {
   if (typeof rawText !== 'string' || rawText.trim().length === 0) {
-    return { valid: [], invalid: [] };
+    return { valid: [], invalid: [], homogeneous: true, formatId: null };
   }
 
   const tokens = tokenise(rawText);
   const valid = [];
   const invalid = [];
+  const formatIds = new Set();
 
   for (const token of tokens) {
-    const date = parseToken(token);
-    if (date) {
-      valid.push(date);
+    const result = matchToken(token);
+    if (result) {
+      valid.push(result.date);
+      formatIds.add(result.formatId);
     } else {
       invalid.push(token);
     }
   }
 
-  return { valid, invalid };
+  const homogeneous = formatIds.size <= 1;
+  const formatId = formatIds.size === 1 ? [...formatIds][0] : null;
+
+  return { valid, invalid, homogeneous, formatId };
 }

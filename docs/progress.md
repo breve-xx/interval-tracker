@@ -70,3 +70,52 @@ All checklist items from TASK-0002 are satisfied. Data entry, validation, persis
 - `Makefile` ✅
 - `make` (bare) prints help ✅
 - All targets functional ✅
+
+## Parser Enhancement: Homogeneous Input & New Formats — COMPLETED (2026-04-30)
+
+### Context
+Enhancement to `src/js/parser.js` implementing DEC-0002 and adding the `list-dmy-slash` format (e.g. `- 20/02/2026 - 15.10`).
+
+### Actions Taken
+
+**Docs**
+- Added `DEC-0002` to `docs/decisions.md`: homogeneous input mandate, format id table, enforcement strategy.
+- Updated `docs/context.md`: replaced abstract input description with concrete format list and homogeneity requirement.
+
+**Source**
+- Rewrote `src/js/parser.js`: replaced the normalise-and-try heuristic with an explicit ordered list of format handlers (`FORMATS`), each with `id`, `detect`, and `parse`. Added `_buildDate` helper to avoid JS engine ambiguity with space-separated date strings. `parseOccurrences` now returns `{ valid, invalid, homogeneous, formatId }`.
+- New `list-dmy-slash` handler parses `- DD/MM/YYYY - HH.MM` (and `HH:MM`) entries, with `*` and `•` accepted as list markers. Day-first order is always respected regardless of day value (no ambiguity).
+- Updated `src/js/uiController.js`: added `homogeneous` check between parse and persist — surfaces a blocking error message if formats are mixed, without saving any records.
+
+**Tests**
+- Updated `tests/unit/parser.test.js`: 56 tests (up from 34), all passing. New groups:
+  - `list-dmy-slash format` — single entry, correct component extraction, ambiguous-day correctness, full 8-entry sample block, colon time separator, `*` and `•` markers.
+  - `homogeneity` — same-format homogeneous, single token, all-invalid vacuous, four cross-format rejection cases, null `formatId` on mixed, populated `valid` when not homogeneous.
+  - `optional time component` — `dmy-slash` and `dmy-dot` date-only, with-seconds variants.
+  - `detect-matches-but-parse-fails` — impossible dates (month=13, day=32) land in `invalid`.
+
+### Final Coverage
+- `parser.js`: 94.64 % statements, 81.25 % branches, 100 % functions, 100 % lines
+- `dataService.js`: 95 % statements, 87.5 % branches, 100 % functions
+- **Overall: 94.73 % statements, 82.5 % branches — above ≥ 80 % mandate.**
+- All 56 tests pass (`npm test` exits 0).
+
+## Parser Enhancement: Flexible Format Rewrite — COMPLETED (2026-04-30)
+
+### Context
+The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced by a single `flexible` handler capable of accepting any single-character date separators and any multi-character date–time gap. Time is required for `flexible`; date-only tokens without an ISO prefix resolve to `invalid`.
+
+### Actions Taken
+
+**Source**
+- Rewrote `src/js/parser.js`: replaced three format handlers with a single `flexible` handler using detection regex `/\d{1,2}.\d{1,2}.\d{4}.+\d{1,2}.\d{2}/` and parse regex `/(\d{1,2}).(\d{1,2}).(\d{4}).+?(\d{1,2}).(\d{2})(?:.(\d{2}))?/`. Day/month disambiguation: if first group > 12 it is the day; if second group > 12 it is the day; otherwise European default (first group = day).
+- Updated `docs/decisions.md` DEC-0002 format table: old `list-dmy-slash`, `dmy-slash`, `dmy-dot` rows replaced with single `flexible` row.
+
+**Tests**
+- Fully rewrote `tests/unit/parser.test.js` to match new handler set. All 60 tests pass.
+
+### Final Coverage (2026-04-30)
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- `dataService.js`: 95 % statements, 87.5 % branches, 100 % functions
+- **Overall: 97.29 % statements, 85.71 % branches — above ≥ 80 % mandate.**
+- All 60 tests pass (`npm test` exits 0).
