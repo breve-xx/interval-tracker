@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { loadRecords, saveRecords, addRecords } from '../../src/js/dataService.js';
+import { loadRecords, saveRecords, addRecords, clearRecords, getLastRecord } from '../../src/js/dataService.js';
 
 const STORAGE_KEY = 'intervalTracker.records';
 
@@ -107,5 +107,57 @@ describe('addRecords', () => {
     saveRecords(['2024-01-01T00:00:00.000Z']);
     const result = addRecords([]);
     expect(result).toHaveLength(1);
+  });
+});
+
+// ─── clearRecords ─────────────────────────────────────────────────────────────
+
+describe('clearRecords', () => {
+  it('causes loadRecords to return an empty array', () => {
+    saveRecords(['2024-01-01T00:00:00.000Z', '2024-06-01T12:00:00.000Z']);
+    clearRecords();
+    expect(loadRecords()).toEqual([]);
+  });
+
+  it('removes the localStorage key entirely', () => {
+    saveRecords(['2024-01-01T00:00:00.000Z']);
+    clearRecords();
+    expect(localStorage.getItem('intervalTracker.records')).toBeNull();
+  });
+
+  it('does not throw when called on an already-empty store', () => {
+    expect(() => clearRecords()).not.toThrow();
+    expect(loadRecords()).toEqual([]);
+  });
+});
+
+// ─── getLastRecord ────────────────────────────────────────────────────────────
+
+describe('getLastRecord', () => {
+  it('returns null when the store is empty', () => {
+    expect(getLastRecord()).toBeNull();
+  });
+
+  it('returns the ISO string of the only record when one exists', () => {
+    const iso = '2024-05-10T10:00:00.000Z';
+    saveRecords([iso]);
+    expect(getLastRecord()).toBe(iso);
+  });
+
+  it('returns the most recent record when multiple records exist', () => {
+    const records = [
+      '2024-01-01T00:00:00.000Z',
+      '2024-06-15T12:00:00.000Z',
+      '2024-12-31T23:59:59.000Z',
+    ];
+    saveRecords(records);
+    expect(getLastRecord()).toBe('2024-12-31T23:59:59.000Z');
+  });
+
+  it('the returned value equals the last element of loadRecords()', () => {
+    const records = ['2024-03-01T08:00:00.000Z', '2024-09-15T16:30:00.000Z'];
+    saveRecords(records);
+    const loaded = loadRecords();
+    expect(getLastRecord()).toBe(loaded[loaded.length - 1]);
   });
 });

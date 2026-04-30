@@ -4,28 +4,122 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Interval Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <div id="app-container">
-    <h1>Interval Tracker</h1>
+
+    <header class="app-header">
+      <span class="app-header__brand">Interval Tracker</span>
+      <button id="theme-toggle-btn" type="button" class="icon-btn" title="Toggle theme" aria-label="Toggle theme">
+        <i data-lucide="moon"></i>
+      </button>
+    </header>
+
+    <!-- ── No-session: batch input ─────────────────────────────────────────── -->
 
     <section id="input-section">
-      <label for="occurrence-input">Paste occurrences (one per line, or comma/semicolon separated):</label>
-      <textarea
-        id="occurrence-input"
-        placeholder="e.g.&#10;2024-03-15 14:30:00&#10;2024-04-02T09:15:00&#10;15/05/2024 18:00"
-        spellcheck="false"
-      ></textarea>
-      <button id="submit-occurrences" type="button">Add Occurrences</button>
-      <p id="input-feedback" role="status" aria-live="polite"></p>
+      <div class="onboard">
+        <h1 class="onboard__title">Interval Tracker</h1>
+        <p class="onboard__lead">Paste timestamps, discover patterns, predict what comes next.</p>
+
+        <ol class="how-it-works">
+          <li><strong>Paste your timestamps</strong> — one per line, or comma / semicolon separated. Any common date-time format works.</li>
+          <li><strong>See the patterns</strong> — mean interval, variance, trend direction, regularity, and more.</li>
+          <li><strong>Get a prediction</strong> — the app estimates when the next occurrence is due and how confident it is.</li>
+        </ol>
+
+        <label class="onboard__label" for="occurrence-input">
+          Paste your occurrences — one per line, or comma / semicolon separated:
+        </label>
+        <textarea
+          id="occurrence-input"
+          class="onboard__textarea"
+          placeholder="e.g.&#10;2024-03-15 14:30:00&#10;2024-04-02T09:15:00&#10;15/05/2024 18:00"
+          spellcheck="false"
+        ></textarea>
+        <div class="onboard__actions">
+          <button id="submit-occurrences" type="button" class="btn btn--primary">
+            <i data-lucide="play"></i>
+            Start Tracking
+          </button>
+          <span class="onboard__actions-or">or</span>
+          <button type="button" id="load-session-btn" class="btn btn--secondary">
+            <i data-lucide="folder-open"></i>
+            Load saved session
+          </button>
+          <input type="file" id="import-file-input" accept=".json,application/json" class="hidden" />
+        </div>
+        <p id="input-feedback" role="status" aria-live="polite" class="feedback"></p>
+        <p id="import-feedback" role="status" aria-live="polite" class="feedback"></p>
+      </div>
     </section>
 
-    <section id="list-section">
-      <h2>Recorded Occurrences</h2>
-      <ul id="occurrence-list"></ul>
+    <!-- ── Active-session: ops bar ────────────────────────────────────────── -->
+
+    <section id="single-add-section" class="hidden">
+      <div class="ops-bar">
+        <div class="ops-add">
+          <input
+            type="text"
+            id="single-occurrence-input"
+            placeholder="Add next occurrence…"
+            spellcheck="false"
+            aria-label="Next occurrence datetime"
+          />
+          <button id="add-single-btn" type="button" class="btn btn--primary">
+            <i data-lucide="plus"></i>
+            <span>Add</span>
+          </button>
+        </div>
+        <div class="ops-actions">
+          <button id="new-session-btn" type="button" class="btn btn--ghost">
+            <i data-lucide="rotate-ccw"></i>
+            <span>New Session</span>
+          </button>
+          <button id="export-session-btn" type="button" class="btn btn--secondary">
+            <i data-lucide="download"></i>
+            <span>Export</span>
+          </button>
+          <button id="download-report-btn" type="button" class="btn btn--secondary">
+            <i data-lucide="file-text"></i>
+            <span>Report</span>
+          </button>
+        </div>
+      </div>
+      <p id="single-add-feedback" role="status" aria-live="polite" class="feedback ops-feedback"></p>
     </section>
-  </div>
+
+    <!-- ── Prediction hero ────────────────────────────────────────────────── -->
+
+    <section id="prediction-section" class="hidden">
+      <div id="prediction-output"></div>
+    </section>
+
+    <!-- ── Statistics ────────────────────────────────────────────────────── -->
+
+    <section id="statistics-section" class="hidden">
+      <div id="statistics-output"></div>
+    </section>
+
+    <!-- ── Occurrences (collapsed by default) ────────────────────────────── -->
+
+    <section id="occurrences-section" class="hidden">
+      <details id="occurrences-details">
+        <summary id="occurrences-summary">
+          <i data-lucide="chevron-right" class="occ-chevron"></i>
+          <h2>Recorded Occurrences</h2>
+        </summary>
+        <ol id="occurrence-list"></ol>
+      </details>
+    </section>
+
+  </div><!-- /#app-container -->
+
   <script type="module" src="js/script.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 </body>
 </html>

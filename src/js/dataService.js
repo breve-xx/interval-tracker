@@ -61,3 +61,24 @@ export function addRecords(newDates) {
   saveRecords(merged);
   return merged;
 }
+
+/**
+ * Erase all persisted records from localStorage.
+ */
+export function clearRecords() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/**
+ * Returns the ISO string of the most recent persisted record, or null if the
+ * store is empty.
+ *
+ * Because loadRecords() always returns a chronologically sorted array, the
+ * last element is always the newest record.
+ *
+ * @returns {string|null}
+ */
+export function getLastRecord() {
+  const records = loadRecords();
+  return records.length > 0 ? records[records.length - 1] : null;
+}
