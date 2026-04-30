@@ -316,3 +316,21 @@ input, button, textarea, select {
 #single-add-feedback.success {
   color: #27ae60;
 }
+
+/* ── Download Report Button ─────────────────────────────────────────────────── */
+
+#download-report-btn {
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  border: 1px solid #27ae60;
+  border-radius: 4px;
+  background-color: #27ae60;
+  color: #fff;
+  font-size: 0.9rem;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+#download-report-btn:hover {
+  background-color: #1e8449;
+  border-color: #1e8449;
+}

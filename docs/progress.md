@@ -257,3 +257,34 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
 - **Overall: 98.14 % statements, 92.56 % branches — above ≥ 80 % mandate.**
 - All 182 tests pass (`npm test` exits 0).
+
+## TASK-0010: Markdown Report Download — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**`src/js/sessionIO.js`**
+- Added three private helpers: `isoToDate(iso)` (formats ISO date part as DD/MM/YYYY), `isoToTime(iso)` (extracts HH:MM from ISO datetime, returns `—` for date-only), `buildMdTable(obj)` (renders a `| Metric | Value |` Markdown table from an object, joining arrays with `, ` or `—`).
+- Added and exported `buildMarkdownReport(occurrences, statistics, prediction)`: pure function, no DOM or localStorage dependencies. Produces a UTF-8 Markdown document following the template defined in TASK-0010 §1. Statistics and Prediction sections omitted entirely when their arguments are null.
+
+**`src/index.html`**
+- Added `<button id="download-report-btn" type="button">Download Report</button>` inside `.session-actions` alongside the existing Export Session and New Session buttons.
+
+**`src/js/uiController.js`**
+- Added `buildMarkdownReport` to the import from `./sessionIO.js`.
+- Added `handleDownloadReport()`: loads records, computes statistics and prediction live, calls `buildMarkdownReport`, creates a `text/markdown` Blob and triggers a download named `interval-tracker-report-YYYY-MM-DD.md`.
+- Wired `#download-report-btn` click → `handleDownloadReport` inside `initUI()`.
+
+**`src/css/styles.css`**
+- Added `#download-report-btn` styles: green (`#27ae60`), hover darker green (`#1e8449`), matching the export button pattern.
+
+**Tests**
+- Extended `tests/unit/sessionIO.test.js` with 13 new tests in a `buildMarkdownReport` describe block covering: non-empty string return, title presence, Occurrences heading, every row rendered, count in header, Statistics section present/absent, Basic/Advanced/Nerd subsections, Prediction section present/absent, confidence score+label rendered, single-occurrence edge case (both null), interval in minutes.
+
+### Final Coverage (2026-04-30)
+- `sessionIO.js`: 98.43 % statements, 92 % branches, 100 % functions, 100 % lines
+- `dataService.js`: 95.65 % statements, 90 % branches, 100 % functions
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- `prediction.js`: 93.47 % statements, 84.21 % branches, 100 % functions
+- `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
+- **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
+- All 195 tests pass (`npm test` exits 0).

@@ -20,7 +20,7 @@ import { loadRecords, addRecords, clearRecords, getLastRecord } from './dataServ
 import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell } from './formatters.js';
 import { computeStatistics } from './statistics.js';
 import { predictNext } from './prediction.js';
-import { buildExportPayload, parseImportPayload } from './sessionIO.js';
+import { buildExportPayload, parseImportPayload, buildMarkdownReport } from './sessionIO.js';
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 
@@ -392,6 +392,26 @@ function handleExport() {
   URL.revokeObjectURL(url);
 }
 
+// ─── Download Report Handler ──────────────────────────────────────────────────
+
+/**
+ * Build a Markdown report from the current session and trigger a file download.
+ */
+function handleDownloadReport() {
+  const occurrences = loadRecords();
+  const statistics  = computeStatistics(occurrences);
+  const prediction  = predictNext(occurrences);
+  const markdown    = buildMarkdownReport(occurrences, statistics, prediction);
+
+  const blob   = new Blob([markdown], { type: 'text/markdown' });
+  const url    = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href     = url;
+  anchor.download = `interval-tracker-report-${new Date().toISOString().slice(0, 10)}.md`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── Import Handler ───────────────────────────────────────────────────────────
 
 /**
@@ -500,6 +520,10 @@ export function initUI() {
   // Export
   const exportBtn = getEl('export-session-btn');
   if (exportBtn) exportBtn.addEventListener('click', handleExport);
+
+  // Download Report
+  const reportBtn = getEl('download-report-btn');
+  if (reportBtn) reportBtn.addEventListener('click', handleDownloadReport);
 
   // Import
   const importInput = getEl('import-file-input');

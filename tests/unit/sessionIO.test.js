@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildExportPayload, parseImportPayload } from '../../src/js/sessionIO.js';
+import { buildExportPayload, parseImportPayload, buildMarkdownReport } from '../../src/js/sessionIO.js';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -157,5 +157,103 @@ describe('parseImportPayload — invalid', () => {
     }));
     expect(result.ok).toBe(false);
     expect(result.error).toContain('index 1');
+  });
+});
+
+// ─── buildMarkdownReport ──────────────────────────────────────────────────────
+
+const FULL_STATISTICS = {
+  unit    : 'days',
+  count   : 3,
+  basic   : { mean: 7, median: 7 },
+  advanced: { stdDev: 0, variance: 0 },
+  nerd    : { outliers: [], skewness: 0 },
+};
+
+const FULL_PREDICTION = {
+  predictedDate  : '2024-01-22T00:00:00.000Z',
+  earliestDate   : '2024-01-20T00:00:00.000Z',
+  latestDate     : '2024-01-24T00:00:00.000Z',
+  confidence     : 90,
+  confidenceLabel: 'High',
+  strategy       : 'mean',
+  intervalUsedMs : 604800000, // 7 days = 10080 minutes
+};
+
+describe('buildMarkdownReport', () => {
+  it('returns a non-empty string', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(typeof report).toBe('string');
+    expect(report.length).toBeGreaterThan(0);
+  });
+
+  it('contains the report title "# Interval Tracker"', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(report).toContain('# Interval Tracker');
+  });
+
+  it('contains an Occurrences section heading', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(report).toContain('## Occurrences');
+  });
+
+  it('lists every occurrence as a table row', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    // Each occurrence should appear as a date in DD/MM/YYYY format in the table
+    expect(report).toContain('| 1 | 01/01/2024 |');
+    expect(report).toContain('| 2 | 08/01/2024 |');
+    expect(report).toContain('| 3 | 15/01/2024 |');
+  });
+
+  it('occurrence count in the header matches the array length', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(report).toContain(`Occurrences: ${OCCURRENCES.length}`);
+  });
+
+  it('contains a Statistics section when statistics is provided', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(report).toContain('## Statistics');
+  });
+
+  it('omits the Statistics section when statistics is null', () => {
+    const report = buildMarkdownReport(OCCURRENCES, null, FULL_PREDICTION);
+    expect(report).not.toContain('## Statistics');
+  });
+
+  it('contains Basic, Advanced, and Nerd subsections when statistics is present', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(report).toContain('### Basic');
+    expect(report).toContain('### Advanced');
+    expect(report).toContain('### Nerd');
+  });
+
+  it('contains a Prediction section when prediction is provided', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(report).toContain('## Prediction');
+  });
+
+  it('omits the Prediction section when prediction is null', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, null);
+    expect(report).not.toContain('## Prediction');
+  });
+
+  it('renders the confidence score and label in the prediction table', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    expect(report).toContain('90% — High');
+  });
+
+  it('renders a valid report for exactly 1 occurrence (statistics and prediction both null)', () => {
+    const report = buildMarkdownReport([OCCURRENCES[0]], null, null);
+    expect(report).toContain('# Interval Tracker');
+    expect(report).toContain('Occurrences: 1');
+    expect(report).toContain('| 1 | 01/01/2024 |');
+    expect(report).not.toContain('## Statistics');
+    expect(report).not.toContain('## Prediction');
+  });
+
+  it('interval used is expressed in minutes (intervalUsedMs / 60 000, rounded)', () => {
+    const report = buildMarkdownReport(OCCURRENCES, FULL_STATISTICS, FULL_PREDICTION);
+    // 604800000 ms / 60000 = 10080 minutes
+    expect(report).toContain('10080 minutes');
   });
 });
