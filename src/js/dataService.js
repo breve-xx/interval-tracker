@@ -61,3 +61,10 @@ export function addRecords(newDates) {
   saveRecords(merged);
   return merged;
 }
+
+/**
+ * Erase all persisted records from localStorage.
+ */
+export function clearRecords() {
+  localStorage.removeItem(STORAGE_KEY);
+}

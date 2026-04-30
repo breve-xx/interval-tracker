@@ -21,9 +21,12 @@
       <p id="input-feedback" role="status" aria-live="polite"></p>
     </section>
 
-    <section id="list-section">
-      <h2>Recorded Occurrences</h2>
-      <ul id="occurrence-list"></ul>
+    <section id="occurrences-section" class="hidden">
+      <details id="occurrences-details" open>
+        <summary id="occurrences-summary"><h2>Recorded Occurrences</h2></summary>
+        <ol id="occurrence-list"></ol>
+        <button id="new-session-btn" type="button">New Session</button>
+      </details>
     </section>
   </div>
   <script type="module" src="js/script.js"></script>

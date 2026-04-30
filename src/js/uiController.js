@@ -1,13 +1,13 @@
 /**
- * uiController.js — DOM event wiring and rudimentary list rendering.
+ * uiController.js — DOM event wiring and rendering.
  *
  * Connects the input textarea and submit button to the parser and data
- * service. Rendering here is intentionally minimal; definitive display
- * is deferred to a future task.
+ * service, and renders occurrences as cards in the occurrences section.
  */
 
 import { parseOccurrences } from './parser.js';
-import { loadRecords, addRecords } from './dataService.js';
+import { loadRecords, addRecords, clearRecords } from './dataService.js';
+import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell } from './formatters.js';
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 
@@ -34,38 +34,101 @@ function clearFeedback() {
   setFeedback('', '');
 }
 
-// ─── List Renderer ────────────────────────────────────────────────────────────
+// ─── Card Renderer ────────────────────────────────────────────────────────────
 
 /**
- * renderList — Loads all persisted records and renders them as a plain list.
- * This is the rudimentary implementation; definitive display is a future task.
+ * Build the inner HTML for a single occurrence card.
+ *
+ * @param {string} iso  UTC ISO 8601 string
+ * @returns {string}    HTML string for an <li> element
+ */
+function buildCardHTML(iso) {
+  const d    = new Date(iso);
+  const date = formatOccurrenceDate(d);
+  const time = formatOccurrenceTime(d);
+  const tell = formatOccurrenceTell(d);
+  return `<li class="occurrence-card" data-iso="${iso}">
+  <div class="occurrence-card__primary">
+    <span class="occurrence-card__date">${date}</span>
+    <span class="occurrence-card__time">${time}</span>
+  </div>
+  <p class="occurrence-card__tell">${tell}</p>
+</li>`;
+}
+
+/**
+ * renderList — Loads all persisted records and renders them as occurrence cards.
+ * Toggles #occurrences-section visibility based on whether records exist.
  */
 export function renderList() {
-  const listEl = getEl('occurrence-list');
-  if (!listEl) return;
+  const listEl    = getEl('occurrence-list');
+  const sectionEl = getEl('occurrences-section');
+  if (!listEl || !sectionEl) return;
 
   const records = loadRecords();
 
   if (records.length === 0) {
-    listEl.innerHTML = '<li class="occurrence-list__empty">No occurrences recorded yet.</li>';
+    listEl.innerHTML = '';
+    sectionEl.classList.add('hidden');
     return;
   }
 
-  listEl.innerHTML = records
-    .map((iso) => {
-      // Format as a human-readable local datetime for display
-      const d = new Date(iso);
-      const label = d.toLocaleString(undefined, {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-      return `<li class="occurrence-list__item" data-iso="${iso}">${label}</li>`;
-    })
-    .join('');
+  listEl.innerHTML = records.map(buildCardHTML).join('');
+  sectionEl.classList.remove('hidden');
+}
+
+// ─── New Session Handler ──────────────────────────────────────────────────────
+
+/**
+ * Wire up the "New Session" button with a two-step confirmation guard.
+ * First click changes the button label; second click (confirm) erases all data.
+ * Clicking anywhere else on the page cancels the pending confirmation.
+ */
+function initNewSessionBtn() {
+  const btn = getEl('new-session-btn');
+  if (!btn) return;
+
+  const originalLabel  = btn.textContent;
+  const confirmLabel   = 'Confirm — this will erase all data';
+  let   pendingConfirm = false;
+
+  function cancelConfirm() {
+    pendingConfirm       = false;
+    btn.textContent      = originalLabel;
+    btn.classList.remove('new-session-btn--confirm');
+  }
+
+  function handleOutsideClick(e) {
+    if (e.target !== btn) {
+      cancelConfirm();
+      document.removeEventListener('click', handleOutsideClick);
+    }
+  }
+
+  btn.addEventListener('click', () => {
+    if (!pendingConfirm) {
+      // First click: enter confirmation state
+      pendingConfirm      = true;
+      btn.textContent     = confirmLabel;
+      btn.classList.add('new-session-btn--confirm');
+      // Next click anywhere outside the button cancels
+      setTimeout(() => {
+        document.addEventListener('click', handleOutsideClick);
+      }, 0);
+    } else {
+      // Second click on button: confirm and execute
+      document.removeEventListener('click', handleOutsideClick);
+      cancelConfirm();
+      clearRecords();
+
+      // Reset input area
+      const inputEl = getEl('occurrence-input');
+      if (inputEl) inputEl.value = '';
+      clearFeedback();
+
+      renderList();
+    }
+  });
 }
 
 // ─── Submit Handler ───────────────────────────────────────────────────────────
@@ -136,4 +199,6 @@ export function initUI() {
       }
     });
   }
+
+  initNewSessionBtn();
 }

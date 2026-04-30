@@ -119,3 +119,25 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - `dataService.js`: 95 % statements, 87.5 % branches, 100 % functions
 - **Overall: 97.29 % statements, 85.71 % branches — above ≥ 80 % mandate.**
 - All 60 tests pass (`npm test` exits 0).
+
+## TASK-0005: Recorded Occurrences Display Section — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**Source**
+- Added `clearRecords()` to `src/js/dataService.js`: removes the localStorage key entirely.
+- Created `src/js/formatters.js`: pure formatting helpers `formatOccurrenceDate(date)` → `dd/MM/yyyy`, `formatOccurrenceTime(date)` → `HH:mm` (24 h), `formatOccurrenceTell(date)` → `The Nth of Month at HH:mm` with correct English ordinal suffixes including the 11th/12th/13th exception.
+- Rewrote `src/js/uiController.js`: imports formatters and `clearRecords`; `renderList` now builds `<li class="occurrence-card">` cards with primary (date + time) and accessory (tell) layers, and toggles `#occurrences-section` visibility via the `.hidden` class. Added `initNewSessionBtn()`: two-step confirmation guard (first click changes button label to "Confirm — this will erase all data"; second click executes; clicking elsewhere cancels).
+- Updated `src/index.html`: replaced the old `#list-section` / `<ul>` with `#occurrences-section` (initially `.hidden`) containing an `<ol id="occurrence-list">` and `#new-session-btn`.
+- Updated `src/css/styles.css`: added `.hidden` utility class; removed old list-row styles; added `.occurrence-card`, `.occurrence-card__primary`, `.occurrence-card__date`, `.occurrence-card__time`, `.occurrence-card__tell` card styles; added `#new-session-btn` muted/destructive styling with `.new-session-btn--confirm` variant.
+
+**Tests**
+- Created `tests/unit/formatters.test.js`: 27 tests covering `formatOccurrenceDate` (zero-padding, midnight, noon), `formatOccurrenceTime` (24 h, midnight, noon, zero-padding), and `formatOccurrenceTell` (all ordinal suffix cases including 11/12/13 exception, all 12 month names, embedded time).
+- Updated `tests/unit/dataService.test.js`: added 3 tests for `clearRecords` (returns empty after clear, key absent from localStorage, no-throw on empty store).
+
+### Final Coverage (2026-04-30)
+- `dataService.js`: 95.23 % statements, 87.5 % branches, 100 % functions
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- `formatters.js`: 100 % statements, 100 % branches, 100 % functions, 100 % lines
+- **Overall: 97.91 % statements, 88.37 % branches — above ≥ 80 % mandate.**
+- All 87 tests pass (`npm test` exits 0).

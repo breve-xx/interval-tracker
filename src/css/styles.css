@@ -82,26 +82,131 @@ input, button, textarea, select {
   color: #27ae60;
 }
 
-/* ── List Section ──────────────────────────────────────────────────────────── */
+/* ── Utility ───────────────────────────────────────────────────────────────── */
 
-#list-section h2 {
-  margin-bottom: 0.75rem;
+.hidden {
+  display: none !important;
+}
+
+/* ── Occurrences Section ───────────────────────────────────────────────────── */
+
+#occurrences-section {
+  margin-top: 2.5rem;
+}
+
+/* ── Collapsible details/summary ───────────────────────────────────────────── */
+
+#occurrences-details {
+  border: none;
+}
+
+/* Remove the default browser marker so we can add our own via ::after */
+#occurrences-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  margin-bottom: 1rem;
+}
+
+#occurrences-summary::-webkit-details-marker {
+  display: none;
+}
+
+#occurrences-summary h2 {
+  margin: 0;
+}
+
+/* Chevron indicator */
+#occurrences-summary::after {
+  content: '▸';
+  font-size: 0.85rem;
+  color: #888;
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+#occurrences-details[open] > #occurrences-summary::after {
+  transform: rotate(90deg);
+}
+
+#occurrences-summary:hover::after {
+  color: #444;
 }
 
 #occurrence-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.occurrence-list__item {
-  padding: 0.25rem 0;
-  border-bottom: 1px solid #e0e0e0;
-  font-family: monospace;
-  font-size: 0.95rem;
+/* ── Occurrence Card ───────────────────────────────────────────────────────── */
+
+.occurrence-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
-.occurrence-list__empty {
+.occurrence-card__primary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.occurrence-card__date {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #1a1a1a;
+}
+
+.occurrence-card__time {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.occurrence-card__tell {
+  font-size: 0.85rem;
   color: #888;
-  font-style: italic;
+  font-weight: 400;
+  margin: 0;
+}
+
+/* ── New Session Button ────────────────────────────────────────────────────── */
+
+#new-session-btn {
+  margin-top: 1.5rem;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  border: 1px solid #b0b0b0;
+  border-radius: 4px;
+  background-color: #f0f0f0;
+  color: #555;
+  font-size: 0.9rem;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+#new-session-btn:hover {
+  background-color: #e0e0e0;
+  color: #333;
+}
+
+#new-session-btn.new-session-btn--confirm {
+  background-color: #c0392b;
+  border-color: #a93226;
+  color: #fff;
+}
+
+#new-session-btn.new-session-btn--confirm:hover {
+  background-color: #a93226;
 }

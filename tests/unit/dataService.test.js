@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { loadRecords, saveRecords, addRecords } from '../../src/js/dataService.js';
+import { loadRecords, saveRecords, addRecords, clearRecords } from '../../src/js/dataService.js';
 
 const STORAGE_KEY = 'intervalTracker.records';
 
@@ -107,5 +107,26 @@ describe('addRecords', () => {
     saveRecords(['2024-01-01T00:00:00.000Z']);
     const result = addRecords([]);
     expect(result).toHaveLength(1);
+  });
+});
+
+// ─── clearRecords ─────────────────────────────────────────────────────────────
+
+describe('clearRecords', () => {
+  it('causes loadRecords to return an empty array', () => {
+    saveRecords(['2024-01-01T00:00:00.000Z', '2024-06-01T12:00:00.000Z']);
+    clearRecords();
+    expect(loadRecords()).toEqual([]);
+  });
+
+  it('removes the localStorage key entirely', () => {
+    saveRecords(['2024-01-01T00:00:00.000Z']);
+    clearRecords();
+    expect(localStorage.getItem('intervalTracker.records')).toBeNull();
+  });
+
+  it('does not throw when called on an already-empty store', () => {
+    expect(() => clearRecords()).not.toThrow();
+    expect(loadRecords()).toEqual([]);
   });
 });
