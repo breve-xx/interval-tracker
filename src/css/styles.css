@@ -31,3 +31,77 @@ input, button, textarea, select {
   margin: 0 auto;
   padding: 2rem 1rem;
 }
+
+/* ── Input Section ─────────────────────────────────────────────────────────── */
+
+#input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+#input-section label {
+  font-weight: 600;
+}
+
+#occurrence-input {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+#submit-occurrences {
+  align-self: flex-start;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #1a1a1a;
+  color: #fff;
+}
+
+#submit-occurrences:hover {
+  background-color: #333;
+}
+
+#input-feedback {
+  min-height: 1.4em;
+  font-size: 0.9rem;
+}
+
+#input-feedback.error {
+  color: #c0392b;
+}
+
+#input-feedback.success {
+  color: #27ae60;
+}
+
+/* ── List Section ──────────────────────────────────────────────────────────── */
+
+#list-section h2 {
+  margin-bottom: 0.75rem;
+}
+
+#occurrence-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.occurrence-list__item {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #e0e0e0;
+  font-family: monospace;
+  font-size: 0.95rem;
+}
+
+.occurrence-list__empty {
+  color: #888;
+  font-style: italic;
+}
