@@ -185,3 +185,75 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - `formatters.js`: 100 % statements, 100 % branches, 100 % functions, 100 % lines
 - **Overall: 98 % statements, 91.34 % branches — above ≥ 80 % mandate.**
 - All 157 tests pass (`npm test` exits 0).
+
+## TASK-0008: Session-Aware Application Workflow — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**Docs**
+- Added `DEC-0003` to `docs/decisions.md`: session-aware workflow mandate, two mutually exclusive UI modes (no-session / active-session), session definition (non-empty `loadRecords()`), single-occurrence rule.
+
+**Source**
+- Added `getLastRecord()` to `src/js/dataService.js`: returns the ISO string of the last (newest) persisted record, or `null` if the store is empty.
+- Updated `src/index.html`: added `<section id="single-add-section" class="hidden">` between `#input-section` and `#occurrences-section`, containing a text `<input id="single-occurrence-input">`, `<button id="add-single-btn">`, and `<p id="single-add-feedback">`.
+- Rewrote `src/js/uiController.js`:
+  - Added `import { getLastRecord }` from `dataService.js`.
+  - Added `setSingleFeedback` / `clearSingleFeedback` helpers for the new feedback element.
+  - Added `applySessionMode(active)`: toggles `.hidden` on `#input-section` (hidden when active) and `#single-add-section` (hidden when inactive).
+  - Updated `renderList()` to call `applySessionMode(records.length > 0)` in all code paths before returning.
+  - Added `handleSingleAdd()`: validates that exactly one datetime was entered, that it parses successfully, and that its ISO string is strictly greater than `getLastRecord()`; shows descriptive errors in `#single-add-feedback` otherwise; on success calls `addRecords` and `renderList()`.
+  - Added `initSingleAddSection()`: wires `#add-single-btn` click and `Enter` keydown on `#single-occurrence-input` to `handleSingleAdd()`.
+  - Updated New Session confirm handler to also clear `#single-occurrence-input` and `#single-add-feedback`.
+  - Updated `initUI()` to call `initSingleAddSection()` and `renderList()` (which applies session mode on page load).
+- Added CSS rules to `src/css/styles.css` for `#single-add-section`, `.single-add-row`, `#single-occurrence-input`, `#add-single-btn`, and `#single-add-feedback` (mirrors the layout and colour conventions of `#input-section`).
+
+**Tests**
+- Updated `tests/unit/dataService.test.js`: added import of `getLastRecord`; added 4 new tests (`returns null on empty store`, `returns ISO string for single record`, `returns most recent of multiple records`, `equals last element of loadRecords()`).
+
+### Final Coverage (2026-04-30)
+- `dataService.js`: 95.65 % statements, 90 % branches, 100 % functions
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- `prediction.js`: 93.47 % statements, 84.21 % branches, 100 % functions
+- `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
+- **Overall: 98.01 % statements, 91.5 % branches — above ≥ 80 % mandate.**
+- All 161 tests pass (`npm test` exits 0).
+
+## TASK-0009: Export / Import Session — COMPLETED (2026-04-30)
+
+### Actions Taken
+
+**Docs**
+- Added `DEC-0004` to `docs/decisions.md`: v1 export file format (`version`, `exportedAt`, `occurrences`, `statistics`, `prediction`); import consumes only `occurrences` and recomputes everything fresh; `version` field enables future migrations.
+
+**Source**
+- Created `src/js/sessionIO.js`: pure module (no DOM/localStorage dependencies) exporting two functions:
+  - `buildExportPayload(occurrences, statistics, prediction)` — assembles the v1 snapshot object with `version: 1`, `exportedAt: new Date().toISOString()`, and the three provided values.
+  - `parseImportPayload(jsonString)` — validates the raw file content through six ordered checks (valid JSON → plain object → version === 1 → occurrences is array → non-empty → all elements are valid datetime strings) and returns `{ ok: true, occurrences }` or `{ ok: false, error }`.
+- Updated `src/index.html`:
+  - Wrapped `#new-session-btn` in a `<div class="session-actions">` and added `<button id="export-session-btn">` alongside it inside `#occurrences-details`.
+  - Added `.import-row` (label + `<input type="file" id="import-file-input">`) and `<p id="import-feedback">` inside `#input-section`, below the existing feedback paragraph.
+- Updated `src/js/uiController.js`:
+  - Added `import { buildExportPayload, parseImportPayload } from './sessionIO.js'`.
+  - Added `setImportFeedback(message, type)` feedback helper for `#import-feedback`.
+  - Added `handleExport()`: calls `loadRecords()`, `computeStatistics()`, `predictNext()`, `buildExportPayload()`; triggers a Blob download named `interval-tracker-YYYY-MM-DD.json`.
+  - Added `handleImport(file)`: reads the file via `FileReader`, calls `parseImportPayload()`; on failure surfaces the error in `#import-feedback` and resets the file input; on success calls `clearRecords()`, `addRecords(imported)`, resets the file input, and calls `renderList()`.
+  - Wired `#export-session-btn` click → `handleExport` and `#import-file-input` change → `handleImport` inside `initUI()`.
+- Updated `src/css/styles.css`:
+  - Added `.session-actions` flex row (replaces bare `margin-top` on `#new-session-btn`).
+  - Added `#export-session-btn` styles (blue, hover darker blue).
+  - Added `.import-row`, `.import-label`, `#import-feedback` styles.
+
+**Tests**
+- Created `tests/unit/sessionIO.test.js`: 21 tests across three groups:
+  - `buildExportPayload` — version, exportedAt validity, occurrences passthrough, statistics/prediction with and without null.
+  - `parseImportPayload — valid` — well-formed payload, ignored fields, single entry, various ISO formats.
+  - `parseImportPayload — invalid` — non-JSON, JSON array, JSON null, missing version, version 2, occurrences not array, empty array, non-string element, invalid date string, error message includes offending index.
+
+### Final Coverage (2026-04-30)
+- `sessionIO.js`: 100 % statements, 100 % branches, 100 % functions, 100 % lines
+- `dataService.js`: 95.65 % statements, 90 % branches, 100 % functions
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- `prediction.js`: 93.47 % statements, 84.21 % branches, 100 % functions
+- `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
+- **Overall: 98.14 % statements, 92.56 % branches — above ≥ 80 % mandate.**
+- All 182 tests pass (`npm test` exits 0).

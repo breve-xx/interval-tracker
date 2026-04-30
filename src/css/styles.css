@@ -184,8 +184,14 @@ input, button, textarea, select {
 
 /* ── New Session Button ────────────────────────────────────────────────────── */
 
-#new-session-btn {
+.session-actions {
+  display: flex;
+  gap: 0.75rem;
   margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
+#new-session-btn {
   padding: 0.5rem 1.25rem;
   cursor: pointer;
   border: 1px solid #b0b0b0;
@@ -209,4 +215,104 @@ input, button, textarea, select {
 
 #new-session-btn.new-session-btn--confirm:hover {
   background-color: #a93226;
+}
+
+/* ── Export Session Button ─────────────────────────────────────────────────── */
+
+#export-session-btn {
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  border: 1px solid #2980b9;
+  border-radius: 4px;
+  background-color: #2980b9;
+  color: #fff;
+  font-size: 0.9rem;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+#export-session-btn:hover {
+  background-color: #1f6fa0;
+  border-color: #1f6fa0;
+}
+
+/* ── Import Row ────────────────────────────────────────────────────────────── */
+
+.import-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.import-label {
+  font-size: 0.9rem;
+  color: #555;
+}
+
+#import-feedback {
+  min-height: 1.4em;
+  font-size: 0.9rem;
+}
+
+#import-feedback.error {
+  color: #c0392b;
+}
+
+#import-feedback.success {
+  color: #27ae60;
+}
+
+/* ── Single Add Section ────────────────────────────────────────────────────── */
+
+#single-add-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+}
+
+#single-add-section label {
+  font-weight: 600;
+}
+
+.single-add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+#single-occurrence-input {
+  flex: 1;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+#add-single-btn {
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background-color: #1a1a1a;
+  color: #fff;
+  white-space: nowrap;
+}
+
+#add-single-btn:hover {
+  background-color: #333;
+}
+
+#single-add-feedback {
+  min-height: 1.4em;
+  font-size: 0.9rem;
+}
+
+#single-add-feedback.error {
+  color: #c0392b;
+}
+
+#single-add-feedback.success {
+  color: #27ae60;
 }

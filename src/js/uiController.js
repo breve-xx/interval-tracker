@@ -3,13 +3,24 @@
  *
  * Connects the input textarea and submit button to the parser and data
  * service, and renders occurrences as cards in the occurrences section.
+ *
+ * Session model (DEC-0003):
+ *   - No-session mode  : #input-section visible, #single-add-section hidden.
+ *   - Active-session   : #input-section hidden,  #single-add-section visible.
+ * The session state is derived solely from whether loadRecords() is non-empty.
+ *
+ * Export/import (DEC-0004):
+ *   - Export button triggers a JSON file download of the full session snapshot.
+ *   - Import file input (no-session mode only) loads a v1 snapshot and replaces
+ *     the current session with the imported occurrences.
  */
 
 import { parseOccurrences } from './parser.js';
-import { loadRecords, addRecords, clearRecords } from './dataService.js';
+import { loadRecords, addRecords, clearRecords, getLastRecord } from './dataService.js';
 import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell } from './formatters.js';
 import { computeStatistics } from './statistics.js';
 import { predictNext } from './prediction.js';
+import { buildExportPayload, parseImportPayload } from './sessionIO.js';
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 
@@ -34,6 +45,51 @@ function setFeedback(message, type = '') {
 
 function clearFeedback() {
   setFeedback('', '');
+}
+
+/**
+ * Display a message in #single-add-feedback.
+ *
+ * @param {string} message
+ * @param {'error'|'success'|''} type
+ */
+function setSingleFeedback(message, type = '') {
+  const el = getEl('single-add-feedback');
+  if (!el) return;
+  el.textContent = message;
+  el.className = type;
+}
+
+function clearSingleFeedback() {
+  setSingleFeedback('', '');
+}
+
+/**
+ * Display a message in #import-feedback.
+ *
+ * @param {string} message
+ * @param {'error'|'success'|''} type
+ */
+function setImportFeedback(message, type = '') {
+  const el = getEl('import-feedback');
+  if (!el) return;
+  el.textContent = message;
+  el.className = type;
+}
+
+// ─── Session Mode ─────────────────────────────────────────────────────────────
+
+/**
+ * Switch the entire UI between no-session and active-session modes.
+ *
+ * @param {boolean} active  true = session running, false = no session.
+ */
+function applySessionMode(active) {
+  const inputSection  = getEl('input-section');
+  const singleSection = getEl('single-add-section');
+
+  if (inputSection)  inputSection.classList.toggle('hidden', active);
+  if (singleSection) singleSection.classList.toggle('hidden', !active);
 }
 
 // ─── Card Renderer ────────────────────────────────────────────────────────────
@@ -61,6 +117,7 @@ function buildCardHTML(iso) {
 /**
  * renderList — Loads all persisted records and renders them as occurrence cards.
  * Toggles #occurrences-section visibility based on whether records exist.
+ * Always applies the correct session mode.
  */
 export function renderList() {
   const listEl    = getEl('occurrence-list');
@@ -68,6 +125,7 @@ export function renderList() {
   if (!listEl || !sectionEl) return;
 
   const records = loadRecords();
+  applySessionMode(records.length > 0);
 
   if (records.length === 0) {
     listEl.innerHTML = '';
@@ -182,6 +240,8 @@ export function renderPrediction() {
   sectionEl.classList.remove('hidden');
 }
 
+// ─── New Session Handler ──────────────────────────────────────────────────────
+
 /**
  * Wire up the "New Session" button with a two-step confirmation guard.
  * First click changes the button label; second click (confirm) erases all data.
@@ -224,16 +284,145 @@ function initNewSessionBtn() {
       cancelConfirm();
       clearRecords();
 
-      // Reset input area
+      // Reset batch input area
       const inputEl = getEl('occurrence-input');
       if (inputEl) inputEl.value = '';
       clearFeedback();
 
-      renderList();
+      // Reset single-add area
+      const singleEl = getEl('single-occurrence-input');
+      if (singleEl) singleEl.value = '';
+      clearSingleFeedback();
+
+      renderList();         // calls applySessionMode(false) internally
       renderStatistics();
       renderPrediction();
     }
   });
+}
+
+// ─── Single-Add Handler ───────────────────────────────────────────────────────
+
+/**
+ * Handle a single-occurrence add attempt.
+ * Rules (DEC-0003):
+ *   - Input must parse to exactly one valid datetime.
+ *   - The parsed datetime must be strictly after getLastRecord().
+ *   - On success: persist, clear input, re-render all sections.
+ *   - On failure: show descriptive error in #single-add-feedback, persist nothing.
+ */
+function handleSingleAdd() {
+  const inputEl = getEl('single-occurrence-input');
+  if (!inputEl) return;
+
+  const rawText = inputEl.value.trim();
+  clearSingleFeedback();
+
+  if (!rawText) {
+    setSingleFeedback('Please enter an occurrence datetime.', 'error');
+    return;
+  }
+
+  const { valid, invalid, homogeneous } = parseOccurrences(rawText);
+
+  if (valid.length !== 1 || !homogeneous) {
+    const hint = invalid.length
+      ? `Unrecognised token: "${invalid[0]}".`
+      : valid.length > 1
+        ? 'Please enter exactly one occurrence datetime.'
+        : 'No recognisable datetime value found.';
+    setSingleFeedback(hint, 'error');
+    return;
+  }
+
+  const newIso   = valid[0].toISOString();
+  const lastIso  = getLastRecord();
+
+  if (lastIso !== null && newIso <= lastIso) {
+    const lastDate = new Date(lastIso);
+    const lastFmt  = `${formatOccurrenceDate(lastDate)} ${formatOccurrenceTime(lastDate)}`;
+    setSingleFeedback(
+      `The new occurrence must be after the last recorded occurrence (${lastFmt}).`,
+      'error'
+    );
+    return;
+  }
+
+  addRecords(valid);
+  inputEl.value = '';
+  setSingleFeedback('Occurrence added.', 'success');
+  renderList();
+}
+
+/**
+ * Wire up the single-add input field and button.
+ * Enter key in the text input triggers the same action as the Add button.
+ */
+function initSingleAddSection() {
+  const btn     = getEl('add-single-btn');
+  const inputEl = getEl('single-occurrence-input');
+
+  if (btn)     btn.addEventListener('click', handleSingleAdd);
+  if (inputEl) inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSingleAdd();
+    }
+  });
+}
+
+// ─── Export Handler ───────────────────────────────────────────────────────────
+
+/**
+ * Build a full session snapshot and trigger a JSON file download.
+ * Statistics and prediction are computed live at export time (DEC-0004).
+ */
+function handleExport() {
+  const occurrences = loadRecords();
+  const statistics  = computeStatistics(occurrences);
+  const prediction  = predictNext(occurrences);
+  const payload     = buildExportPayload(occurrences, statistics, prediction);
+
+  const blob   = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url    = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href     = url;
+  anchor.download = `interval-tracker-${new Date().toISOString().slice(0, 10)}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Import Handler ───────────────────────────────────────────────────────────
+
+/**
+ * Read the selected file, validate it with parseImportPayload, and if valid
+ * replace the current session with the imported occurrences.
+ *
+ * @param {File} file
+ */
+function handleImport(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const result = parseImportPayload(e.target.result);
+
+    const fileInput = getEl('import-file-input');
+
+    if (!result.ok) {
+      setImportFeedback(result.error, 'error');
+      if (fileInput) fileInput.value = '';
+      return;
+    }
+
+    // Replace session: clear existing data then add imported occurrences
+    clearRecords();
+    addRecords(result.occurrences.map((iso) => new Date(iso)));
+
+    if (fileInput) fileInput.value = '';
+    setImportFeedback('', '');
+
+    renderList();
+  };
+  reader.readAsText(file);
 }
 
 // ─── Submit Handler ───────────────────────────────────────────────────────────
@@ -285,7 +474,7 @@ function handleSubmit() {
 // ─── Initialisation ───────────────────────────────────────────────────────────
 
 /**
- * initUI — Binds DOM event listeners.
+ * initUI — Binds DOM event listeners and applies the initial session mode.
  * Must be called after the DOM is ready.
  */
 export function initUI() {
@@ -306,4 +495,19 @@ export function initUI() {
   }
 
   initNewSessionBtn();
+  initSingleAddSection();
+
+  // Export
+  const exportBtn = getEl('export-session-btn');
+  if (exportBtn) exportBtn.addEventListener('click', handleExport);
+
+  // Import
+  const importInput = getEl('import-file-input');
+  if (importInput) {
+    importInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) handleImport(e.target.files[0]);
+    });
+  }
+
+  renderList();   // applies the correct session mode on page load
 }

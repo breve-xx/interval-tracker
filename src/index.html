@@ -19,13 +19,35 @@
       ></textarea>
       <button id="submit-occurrences" type="button">Add Occurrences</button>
       <p id="input-feedback" role="status" aria-live="polite"></p>
+      <div class="import-row">
+        <label for="import-file-input" class="import-label">Or load a saved session:</label>
+        <input type="file" id="import-file-input" accept=".json,application/json" />
+      </div>
+      <p id="import-feedback" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="single-add-section" class="hidden">
+      <label for="single-occurrence-input">Add next occurrence:</label>
+      <div class="single-add-row">
+        <input
+          type="text"
+          id="single-occurrence-input"
+          placeholder="e.g. 2024-05-10 14:30:00"
+          spellcheck="false"
+        />
+        <button id="add-single-btn" type="button">Add</button>
+      </div>
+      <p id="single-add-feedback" role="status" aria-live="polite"></p>
     </section>
 
     <section id="occurrences-section" class="hidden">
       <details id="occurrences-details" open>
         <summary id="occurrences-summary"><h2>Recorded Occurrences</h2></summary>
         <ol id="occurrence-list"></ol>
-        <button id="new-session-btn" type="button">New Session</button>
+        <div class="session-actions">
+          <button id="new-session-btn" type="button">New Session</button>
+          <button id="export-session-btn" type="button">Export Session</button>
+        </div>
       </details>
     </section>
 
