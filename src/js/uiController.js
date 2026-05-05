@@ -29,6 +29,7 @@ import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell } from
 import { computeStatistics } from './statistics.js';
 import { predictNext } from './prediction.js';
 import { buildExportPayload, parseImportPayload, buildMarkdownReport } from './sessionIO.js';
+import { renderIntervalChart } from './chartRenderer.js';
 
 // ─── Static Explanatory Content ───────────────────────────────────────────────
 
@@ -291,6 +292,7 @@ export function renderList() {
     sectionEl.classList.add('hidden');
     renderStatistics();
     renderPrediction();
+    renderChart();
     return;
   }
 
@@ -298,6 +300,7 @@ export function renderList() {
   sectionEl.classList.remove('hidden');
   renderStatistics();
   renderPrediction();
+  renderChart();
   refreshIcons();
 }
 
@@ -502,6 +505,55 @@ export function renderPrediction() {
   refreshIcons();
 }
 
+// ─── Chart Renderer ───────────────────────────────────────────────────────────
+
+/**
+ * renderChart — Builds the interval series and renders the SVG chart.
+ * Hides #chart-section when fewer than 2 occurrences exist.
+ */
+export function renderChart() {
+  const sectionEl = getEl('chart-section');
+  const outputEl  = getEl('chart-output');
+  if (!sectionEl || !outputEl) return;
+
+  const records = loadRecords();
+  const stats   = computeStatistics(records);
+
+  if (!stats) {
+    sectionEl.classList.add('hidden');
+    return;
+  }
+
+  const { unit } = stats;
+  const unitDivisor = unit === 'days' ? 86_400_000 : unit === 'hours' ? 3_600_000 : 60_000;
+
+  const dates      = records.map((r) => new Date(r));
+  const intervals  = dates.slice(1).map((d, i) =>
+    Math.round((d - dates[i]) / unitDivisor * 100) / 100
+  );
+
+  // Unit badge
+  const unitBadge = getEl('chart-unit-badge');
+  if (unitBadge) unitBadge.textContent = unit;
+
+  // Trend label
+  const trendLabel = getEl('chart-trend-label');
+  if (trendLabel) {
+    const trend = stats.advanced.trend;
+    if (trend === 'increasing') {
+      trendLabel.textContent = '▲ intervals are growing';
+    } else if (trend === 'decreasing') {
+      trendLabel.textContent = '▼ intervals are shrinking';
+    } else {
+      trendLabel.textContent = '─ intervals are stable';
+    }
+  }
+
+  renderIntervalChart(outputEl, intervals, unit, stats);
+
+  sectionEl.classList.remove('hidden');
+}
+
 // ─── New Session Handler ──────────────────────────────────────────────────────
 
 /**
@@ -556,6 +608,7 @@ function initNewSessionBtn() {
       renderList();
       renderStatistics();
       renderPrediction();
+      renderChart();
     }
   });
 }

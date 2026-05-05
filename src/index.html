@@ -99,6 +99,35 @@
       <div id="prediction-output"></div>
     </section>
 
+    <!-- ── Interval chart ─────────────────────────────────────────────────── -->
+
+    <section id="chart-section" class="hidden">
+      <div class="chart-card">
+        <div class="chart-header">
+          <i data-lucide="activity"></i>
+          <span>Interval Graph &nbsp;·&nbsp; <strong id="chart-unit-badge"></strong></span>
+        </div>
+        <div class="chart-wrap">
+          <div id="chart-output"></div>
+        </div>
+        <div class="chart-legend">
+          <span class="chart-legend__item">
+            <span class="chart-legend__swatch chart-legend__swatch--solid" style="background:var(--accent)"></span>
+            intervals
+          </span>
+          <span class="chart-legend__item">
+            <span class="chart-legend__swatch chart-legend__swatch--dashed" style="color:var(--accent)"></span>
+            trend
+          </span>
+          <span class="chart-legend__item">
+            <span class="chart-legend__swatch chart-legend__swatch--dotted" style="color:var(--color-muted)"></span>
+            mean
+          </span>
+          <span id="chart-trend-label" class="chart-legend__item"></span>
+        </div>
+      </div>
+    </section>
+
     <!-- ── Statistics ────────────────────────────────────────────────────── -->
 
     <section id="statistics-section" class="hidden">

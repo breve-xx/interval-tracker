@@ -35,6 +35,11 @@
   --radius-sm     : 7px;
   --radius-xs     : 5px;
 
+  /* Chart / trend colours */
+  --color-trend-up   : #e67e22;
+  --color-trend-down : #2980b9;
+  --color-muted      : #aaaaaa;
+
   /* Motion */
   --transition    : 0.15s ease;
 
@@ -67,6 +72,10 @@
   --shadow-sm     : 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md     : 0 4px 12px rgba(0, 0, 0, 0.45);
   --shadow-lg     : 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  --color-trend-up   : #f39c12;
+  --color-trend-down : #3498db;
+  --color-muted      : #666666;
 }
 
 /* ── Reset ─────────────────────────────────────────────────────────────────── */
@@ -833,6 +842,76 @@ svg.lucide {
   color      : var(--text-subtle);
   line-height: 1.5;
   margin-top : -0.5rem;
+}
+
+/* ── Interval Chart ────────────────────────────────────────────────────────── */
+
+#chart-section {
+  margin-bottom : 1.75rem;
+}
+
+.chart-card {
+  background-color : var(--bg-surface);
+  border           : 1px solid var(--border);
+  border-radius    : var(--radius);
+  box-shadow       : var(--shadow-sm);
+  padding          : 1.5rem 1.75rem;
+  display          : flex;
+  flex-direction   : column;
+  gap              : 1rem;
+}
+
+.chart-header {
+  display     : flex;
+  align-items : center;
+  gap         : 0.5rem;
+  font-size   : 0.875rem;
+  color       : var(--text-muted);
+}
+.chart-header svg  { color: var(--text-subtle); }
+.chart-header strong { color: var(--text); }
+
+.chart-wrap {
+  width      : 100%;
+  overflow-x : auto;
+}
+.chart-wrap svg {
+  display : block;
+  width   : 100%;
+  height  : auto;
+}
+
+.chart-legend {
+  display    : flex;
+  gap        : 1.25rem;
+  font-size  : 0.75rem;
+  color      : var(--color-muted);
+  flex-wrap  : wrap;
+  align-items: center;
+}
+
+.chart-legend__item {
+  display    : flex;
+  align-items: center;
+  gap        : 0.4em;
+}
+
+.chart-legend__swatch {
+  display      : inline-block;
+  width        : 20px;
+  height       : 2px;
+  border-radius: 1px;
+}
+.chart-legend__swatch--solid  { height: 3px; }
+.chart-legend__swatch--dashed {
+  height          : 0;
+  border-top      : 2px dashed currentColor;
+  background      : none;
+}
+.chart-legend__swatch--dotted {
+  height          : 0;
+  border-top      : 2px dotted currentColor;
+  background      : none;
 }
 
 /* ── Responsive ────────────────────────────────────────────────────────────── */

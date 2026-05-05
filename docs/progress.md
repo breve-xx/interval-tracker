@@ -313,47 +313,35 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 ### Final Coverage (2026-04-30)
 - All business-logic modules unchanged.
 - **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
-- All 195 tests pass (`npm test` exits 0). — COMPLETED (2026-04-30)
+- All 195 tests pass (`npm test` exits 0).
+
+## TASK-0013: Interval Graph View — COMPLETED (2026-05-05)
 
 ### Actions Taken
 
-**`docs/decisions.md`**
-- Added DEC-0005 logging the Lucide Icons CDN glyph library choice and the CSS custom-property dual-theme system (light/dark).
+**`docs/tasks/TASK-0013.md`** — created with full specification before implementation.
 
-**`src/index.html`** — restructured:
-- Added Google Fonts `<link>` for **Inter** (400–700).
-- Added `<header class="app-header">` with brand text and `#theme-toggle-btn`.
-- No-session state wrapped in a `.onboard` card with a clear title, lead line, textarea, CTA button, and an understated import row.
-- Active-session `#single-add-section` converted to an **ops bar** containing the single-add input+button on the left and New Session / Export / Report action buttons on the right (`.session-actions` removed from `#occurrences-details`).
-- `#occurrences-details` starts **closed** (no `open` attribute).
-- Section order: ops bar → prediction → statistics → occurrences.
-- Lucide CDN UMD `<script>` added before `</body>`.
-- Icons declared as `<i data-lucide="name">` throughout.
+**`src/css/styles.css`**
+- Added `--color-trend-up` (#e67e22 / #f39c12 dark), `--color-trend-down` (#2980b9 / #3498db dark), and `--color-muted` (#aaaaaa / #666666 dark) to `:root` and `[data-theme="dark"]`.
+- Added `#chart-section`, `.chart-card`, `.chart-header`, `.chart-wrap`, `.chart-legend`, `.chart-legend__item`, `.chart-legend__swatch` (solid / dashed / dotted variants) styles, coherent with the existing card and section aesthetic.
 
-**`src/css/styles.css`** — full rewrite:
-- CSS custom properties for light palette on `:root`; dark palette override on `[data-theme="dark"]`.
-- Shared button system: `.btn--primary`, `.btn--secondary`, `.btn--ghost`, `.icon-btn`.
-- `.onboard` centered card for the no-session state.
-- `.ops-bar` horizontal strip with flex wrap for the active-session controls.
-- `.pred-hero` large surface card: display-size tell text, date+time pair, `.confidence-badge` color-coded by level (high/medium/low), window range with icon, secondary `.chip` elements for strategy and interval.
-- Statistics: `.stats-tabbar` + `.stats-tab` (accent underline on active) + `.stats-panel` (only active panel displayed) + `.stats-grid` auto-fill tile grid + `.stats-tile` (label/value stacked).
-- Occurrences: `<details>` custom summary with chevron icon, `.occ-row` slim three-column grid (index | date+time | tell).
-- `@media (max-width: 640px)` responsive overrides: ops bar stacks, prediction font scales down, stats grid collapses to two columns, occurrence rows reflow.
+**`src/js/chartRenderer.js`** — new module, exports `renderIntervalChart(container, intervals, unit, stats)`:
+- Builds a pure inline SVG (`viewBox="0 0 600 240"`, `width="100%"`) with no external dependencies.
+- Draws (back to front): Y-axis grid lines + tick labels (nice-tick algorithm), dotted mean reference line, X-axis baseline, bars (accent at 28% opacity, `rx=3`), connecting polyline, dots (`r=4`), dashed regression trend line.
+- X-axis index labels (1-based gap number, up to 12 visible labels for dense series).
+- Y-axis unit label (rotated) and X-axis "gap #" label.
+- All colours resolved via `getComputedStyle` at render time → automatically theme-aware.
+- Accent colour: `--color-trend-up` when `trend === 'increasing'`, `--color-trend-down` when `decreasing`, `--accent` when stable.
 
-**`src/js/uiController.js`** — updated:
-- New helpers: `refreshIcons()`, `humaniseKey(key)`, `fmtVal(v)`, `round2(n)`, `confidenceClass(score)`.
-- `initTheme()`: reads `localStorage`/`prefers-color-scheme`, sets `data-theme` on `<html>`, wires toggle button.
-- `updateThemeBtn(theme)`: swaps icon between `moon` and `sun`.
-- `buildCardHTML(iso, idx)` → slim `.occ-row` rows with 1-based index.
-- `renderList()`: passes index to `buildCardHTML`; calls `refreshIcons()`.
-- `buildStatsGrid(obj)`: renders `.stats-grid` of `.stats-tile` elements using `humaniseKey` + `fmtVal`.
-- `renderStatistics()`: emits stats-header, tabbar, three panels; wires tab click handlers; calls `refreshIcons()`.
-- `renderPrediction()`: emits `.pred-hero` card with all fields, confidence badge, window, chips; calls `refreshIcons()`.
-- `initNewSessionBtn()`: confirm label updated to use icon markup.
-- `initUI()`: calls `initTheme()` first, then full wiring as before; `refreshIcons()` at end.
-- Feedback class strings updated to preserve `.feedback` base class.
+**`src/index.html`**
+- Added `<section id="chart-section" class="hidden">` between `#prediction-section` and `#statistics-section`, containing `.chart-card` with header (activity icon + unit badge), `#chart-output`, and a legend row (intervals / trend / mean swatches + `#chart-trend-label`).
 
-### Final Coverage (2026-04-30)
-- All business-logic modules unchanged; coverage identical to TASK-0010.
+**`src/js/uiController.js`**
+- Added `import { renderIntervalChart } from './chartRenderer.js'`.
+- Added `renderChart()`: loads records, calls `computeStatistics`, computes raw interval array from consecutive date differences, sets `#chart-unit-badge` and `#chart-trend-label`, calls `renderIntervalChart`, shows/hides `#chart-section`.
+- Wired `renderChart()` into both code paths of `renderList()` and the New Session confirm handler.
+
+### Final Coverage (2026-05-05)
+- All business-logic modules unchanged; coverage identical to TASK-0012.
 - **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
 - All 195 tests pass (`npm test` exits 0).
