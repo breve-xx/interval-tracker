@@ -345,3 +345,25 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - All business-logic modules unchanged; coverage identical to TASK-0012.
 - **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
 - All 195 tests pass (`npm test` exits 0).
+
+## TASK-0014: Application Footer — COMPLETED (2026-05-05)
+
+### Actions Taken
+
+**`docs/tasks/TASK-0014.md`** — created with full specification before implementation.
+
+**`src/index.html`**
+- Added `<footer class="app-footer">` as the last child of `#app-container`, after `#occurrences-section`.
+- Left side: `.app-footer__brand` span with the app name and tagline.
+- Right side: `.app-footer__link` anchor pointing to `https://github.com/breve-xx/interval-tracker`, opening in a new tab with `rel="noopener noreferrer"`, prefixed with a `data-lucide="github"` icon.
+
+**`src/css/styles.css`**
+- Added `.app-footer` (flex row, space-between, top border using `var(--border)`, top padding/margin for breathing room).
+- Added `.app-footer__brand` (0.8 rem, `var(--text-subtle)`).
+- Added `.app-footer__link` (inline-flex, no underline at rest, transitions to `var(--text-muted)` on hover).
+- Added responsive override inside the existing `@media (max-width: 640px)` block: footer stacks vertically and centres.
+
+### Final Coverage (2026-05-05)
+- No business-logic modules changed; coverage identical to TASK-0013.
+- **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
+- All 195 tests pass (`npm test` exits 0).
