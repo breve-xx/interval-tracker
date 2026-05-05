@@ -109,7 +109,7 @@ body {
 #app-container {
   max-width  : 900px;
   margin     : 0 auto;
-  padding    : 0 1rem 4rem;
+  padding    : 0 1rem 5rem;
 }
 
 /* ── Utility ───────────────────────────────────────────────────────────────── */
@@ -234,11 +234,18 @@ svg.lucide {
 }
 
 .app-header__brand {
-  font-size   : 0.9rem;
-  font-weight : 600;
-  color       : var(--text-muted);
+  display       : inline-flex;
+  align-items   : center;
+  gap           : 0.4em;
+  font-size     : 0.9rem;
+  font-weight   : 600;
+  color         : var(--text-muted);
   letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+.app-header__brand svg.lucide {
+  width  : 1.1em;
+  height : 1.1em;
 }
 
 /* ── No-session Onboard ────────────────────────────────────────────────────── */
@@ -917,13 +924,18 @@ svg.lucide {
 /* ── Footer ────────────────────────────────────────────────────────────────── */
 
 .app-footer {
+  position        : sticky;
+  bottom          : 0;
+  z-index         : 100;
   display         : flex;
   align-items     : center;
   justify-content : space-between;
   gap             : 1rem;
-  padding         : 2rem 0 1rem;
+  padding         : 0.75rem 0;
   margin-top      : 2rem;
+  background-color: var(--bg);
   border-top      : 1px solid var(--border);
+  transition      : background-color var(--transition);
 }
 
 .app-footer__brand {

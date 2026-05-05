@@ -367,3 +367,21 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - No business-logic modules changed; coverage identical to TASK-0013.
 - **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
 - All 195 tests pass (`npm test` exits 0).
+
+## TASK-0015: Brand Glyph in Header — COMPLETED (2026-05-05)
+
+### Actions Taken
+
+**`docs/tasks/TASK-0015.md`** — created with full specification before implementation.
+
+**`src/index.html`**
+- Expanded `.app-header__brand` `<span>` to contain `<i data-lucide="activity"></i>` before the brand text. The icon is materialised at load time by the existing `refreshIcons()` call in `initUI()`.
+
+**`src/css/styles.css`**
+- Updated `.app-header__brand` to `display: inline-flex; align-items: center; gap: 0.4em` so the glyph and text sit on a shared baseline.
+- Added `.app-header__brand svg.lucide { width: 1.1em; height: 1.1em }` override so the icon sits slightly larger than the label text without dominating it.
+
+### Final Coverage (2026-05-05)
+- No business-logic modules changed; coverage identical to TASK-0014.
+- **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
+- All 195 tests pass (`npm test` exits 0).
