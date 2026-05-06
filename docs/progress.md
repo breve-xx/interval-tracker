@@ -452,3 +452,27 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
 - **Overall: 97.46 % statements, 86.74 % branches — above ≥ 80 % mandate.**
 - All 220 tests pass (`npm test` exits 0).
+
+## TASK-0017: Application Favicon — COMPLETED (2026-05-06)
+
+### Actions Taken
+
+**`src/favicon.svg`** — new file
+- 32 × 32 SVG with a rounded-square background (`rx="7" ry="7"`) and the Lucide `activity`
+  heartbeat waveform centred inside it.
+- Inline `<style>` block sets `.bg { fill: #4f46e5 }` (light mode) and overrides to
+  `.bg { fill: #818cf8 }` via `@media (prefers-color-scheme: dark)` so the favicon adapts
+  automatically without JavaScript.
+- Waveform path `M2 16 h5 l3.5 -10.5 L16 26 l3.5 -10.5 h5` — hand-tuned from the Lucide
+  native `M22 12h-4l-3 9L9 3l-3 9H2` path for the 32 × 32 canvas.
+- White `#ffffff` stroke, `stroke-width="2.5"`, `stroke-linecap="round"`,
+  `stroke-linejoin="round"`.
+
+**`src/index.html`**
+- Added `<link rel="icon" type="image/svg+xml" href="favicon.svg" />` as the first tag in
+  `<head>` after the `<meta>` declarations.
+
+### Final Coverage (2026-05-06)
+- No business-logic modules changed; coverage identical to TASK-0016.
+- **Overall: 97.46 % statements, 86.74 % branches — above ≥ 80 % mandate.**
+- All 220 tests pass (`npm test` exits 0).
