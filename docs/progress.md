@@ -385,3 +385,70 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - No business-logic modules changed; coverage identical to TASK-0014.
 - **Overall: 98.1 % statements, 91.6 % branches — above ≥ 80 % mandate.**
 - All 195 tests pass (`npm test` exits 0).
+
+## TASK-0016: Redesigned Markdown Report — COMPLETED (2026-05-06)
+
+### Actions Taken
+
+**`docs/decisions.md`**
+- Added `DEC-0006`: `STATS_GLOSSARY`, `STATS_LEVEL_DESC`, and `STRATEGY_DESC` are canonical
+  shared constants living in `src/js/reportConstants.js`, imported by both `uiController.js`
+  and `sessionIO.js`.
+
+**`src/js/reportConstants.js`** — new module (no imports, no side effects)
+- Exports `STATS_GLOSSARY` (per-key plain-English descriptions for basic/advanced/nerd levels),
+  `STATS_LEVEL_DESC` (one-line level introductions), and `STRATEGY_DESC` (prediction strategy
+  descriptions). These were previously duplicated inline in `uiController.js`.
+
+**`src/js/uiController.js`**
+- Removed the three inline constant declarations.
+- Added `import { STATS_GLOSSARY, STATS_LEVEL_DESC, STRATEGY_DESC } from './reportConstants.js'`.
+
+**`src/js/sessionIO.js`**
+- Removed the old `buildMdTable` helper and raw `lines.push` implementation.
+- Added imports: `formatOccurrenceTell`, `formatOccurrenceDate`, `formatOccurrenceTime` from
+  `./formatters.js`; `STATS_GLOSSARY`, `STATS_LEVEL_DESC`, `STRATEGY_DESC` from
+  `./reportConstants.js`.
+- Added internal helpers: `humaniseKey`, `round2`, `fmtStatVal` (formats stat values with unit
+  suffix only for interval-length keys), `buildPredictionSection`, `buildChartSection`,
+  `buildStatisticsSection`, `buildOccurrencesSection`.
+- Rewrote `buildMarkdownReport` using a template-driven section assembly:
+  1. **Header**: `DD/MM/YYYY at HH:MM · N occurrences recorded`
+  2. **Prediction** (when non-null, placed first): human-readable tell, date/time, confidence
+     badge with narrative, prediction window, time-remaining countdown (or past-note), strategy
+     with description, interval used in the session unit.
+  3. **Interval chart** (when stats non-null): ASCII bar chart using `▁▂▃▄▅▆▇█` inside a fenced
+     code block; gap labels for ≤ 12 intervals; trend arrow + mean caption.
+  4. **Statistics** (when non-null): definition-block format (`**Label:** value\n_description_`)
+     for all keys in basic/advanced/nerd, with unit suffix only for interval-length keys and
+     descriptions sourced from `STATS_GLOSSARY`.
+  5. **Occurrences**: plain numbered list; sessions > 50 occurrences truncated to first 10 +
+     last 10 with a `… N more occurrences …` separator.
+  6. **Footer**: GitHub URL.
+
+**`vite.config.js`**
+- Added `src/js/chartRenderer.js` to the coverage `exclude` list (DOM SVG renderer, same
+  category as `uiController.js`; has no unit-testable pure logic).
+
+**`tests/unit/sessionIO.test.js`**
+- Updated imports to add `computeStatistics`, `predictNext`, `STATS_GLOSSARY`, `STRATEGY_DESC`.
+- Replaced the old `buildMarkdownReport` describe block (13 tests using stub fixtures) with a
+  new suite of 25 tests using real engine output, covering: basic shape, header fields,
+  prediction presence/absence, confidence narrative (all three branches), time-remaining vs.
+  past-note, strategy description, chart presence/absence, fenced code block with block chars,
+  statistics presence/absence with definition blocks, occurrences as plain list (not table),
+  truncation at > 50 occurrences, footer URL, single-occurrence edge case, increasing/decreasing
+  trend branches, hours-unit path, and dense-chart label-omission path.
+
+**`tests/unit/reportConstants.test.js`** — new file
+- 8 tests covering `STATS_GLOSSARY` structure (all keys and sub-keys), `STATS_LEVEL_DESC` keys,
+  `STRATEGY_DESC` keys, and non-empty string invariants for all values.
+
+### Final Coverage (2026-05-06)
+- `sessionIO.js`: 96.4 % statements, 80 % branches, 95.65 % functions, 98.43 % lines
+- `statistics.js`: 100 % statements, 97.61 % branches, 100 % functions, 100 % lines
+- `prediction.js`: 93.47 % statements, 84.21 % branches, 100 % functions
+- `dataService.js`: 95.65 % statements, 90 % branches, 100 % functions
+- `parser.js`: 98.14 % statements, 85.18 % branches, 100 % functions, 100 % lines
+- **Overall: 97.46 % statements, 86.74 % branches — above ≥ 80 % mandate.**
+- All 220 tests pass (`npm test` exits 0).

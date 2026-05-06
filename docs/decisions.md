@@ -124,3 +124,25 @@ Two themes are supported: **light** (default) and **dark**.
   4. Wires the `#theme-toggle-btn` click: toggles the attribute, persists the new value to `localStorage`, and updates the toggle button icon via `refreshIcons()`.
 
 **Rationale**: CSS custom properties require no JavaScript for the actual theme switch — only a single attribute change on `<html>`. This is the most performant and simplest approach with no flash of unstyled content when the theme is initialised synchronously before first paint.
+
+---
+
+## DEC-0006 — Shared Report Constants Module (2026-05-06)
+
+**Decision**: The descriptive text constants `STATS_GLOSSARY`, `STATS_LEVEL_DESC`, and
+`STRATEGY_DESC` are the canonical source of truth for statistics and prediction descriptions.
+They live in a single dedicated module: **`src/js/reportConstants.js`**.
+
+Both `uiController.js` (live UI glossary panel and prediction descriptions) and `sessionIO.js`
+(Markdown report generation) import these constants from `reportConstants.js`. Neither module
+declares its own copy.
+
+**Rationale**: Before this decision the constants were defined inline in `uiController.js` and
+duplicated (implicitly) in any report-generation code. Centralising them in a dependency-free
+module guarantees that the live UI and the downloaded report always use identical wording, and
+makes future text updates a single-file change.
+
+**Constraints**:
+- `reportConstants.js` must have **no imports, no DOM dependencies, and no side effects**.
+- It exports only plain object literals (`export const …`).
+- Any module in `src/js/` may import from it without risk of circular dependencies.

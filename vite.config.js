@@ -7,7 +7,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/js/**/*.js'],
-      exclude: ['src/js/script.js', 'src/js/uiController.js'],
+      exclude: ['src/js/script.js', 'src/js/uiController.js', 'src/js/chartRenderer.js'],
     },
   },
 });
