@@ -30,7 +30,8 @@ import { computeStatistics } from './statistics.js';
 import { predictNext } from './prediction.js';
 import { buildExportPayload, parseImportPayload, buildMarkdownReport } from './sessionIO.js';
 import { renderIntervalChart } from './chartRenderer.js';
-import { STATS_GLOSSARY, STATS_LEVEL_DESC, STRATEGY_DESC } from './reportConstants.js';
+import { STATS_GLOSSARY, STATS_LEVEL_DESC, STRATEGY_DESC, CONFIDENCE_NARRATIVE } from './reportConstants.js';
+import { humaniseKey, round2, ISO_DATETIME_RE, msPerUnit } from './utils.js';
 
 // ─── Static Explanatory Content (imported from reportConstants.js — DEC-0006) ─
 // STATS_GLOSSARY, STATS_LEVEL_DESC, STRATEGY_DESC are used below in rendering
@@ -58,24 +59,7 @@ function refreshIcons() {
 
 // ─── Display Helpers ──────────────────────────────────────────────────────────
 
-/**
- * Convert a camelCase key to a human-readable Title Case label.
- *
- * @param {string} key  e.g. "intervalCount"
- * @returns {string}    e.g. "Interval Count"
- */
-function humaniseKey(key) {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (c) => c.toUpperCase())
-    .trim();
-}
-
-/**
- * Regex that matches an ISO 8601 datetime string produced by Date#toISOString().
- * Used in fmtVal to pretty-print date values in statistics tiles.
- */
-const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+// humaniseKey, round2, ISO_DATETIME_RE imported from utils.js
 
 /**
  * Format a statistics value for display.
@@ -96,10 +80,6 @@ function fmtVal(v) {
   }
   if (typeof v === 'number') return String(round2(v));
   return String(v);
-}
-
-function round2(n) {
-  return Math.round(n * 100) / 100;
 }
 
 /**
@@ -225,6 +205,7 @@ function buildCardHTML(iso, idx) {
  * renderList — Loads all persisted records and renders them as occurrence rows.
  * Toggles #occurrences-section visibility based on whether records exist.
  * Always applies the correct session mode.
+ * Loads records and computes statistics once, then passes results to sub-renderers.
  */
 export function renderList() {
   const listEl    = getEl('occurrence-list');
@@ -232,22 +213,25 @@ export function renderList() {
   if (!listEl || !sectionEl) return;
 
   const records = loadRecords();
+  const stats   = computeStatistics(records);
+  const pred    = stats ? predictNext(records) : null;
+
   applySessionMode(records.length > 0);
 
   if (records.length === 0) {
     listEl.innerHTML = '';
     sectionEl.classList.add('hidden');
-    renderStatistics();
-    renderPrediction();
-    renderChart();
+    renderStatistics(null);
+    renderPrediction(null);
+    renderChart(records, null);
     return;
   }
 
   listEl.innerHTML = records.map((iso, i) => buildCardHTML(iso, i + 1)).join('');
   sectionEl.classList.remove('hidden');
-  renderStatistics();
-  renderPrediction();
-  renderChart();
+  renderStatistics(stats);
+  renderPrediction(pred);
+  renderChart(records, stats);
   refreshIcons();
 }
 
@@ -308,15 +292,15 @@ function buildGlossaryPanel() {
 }
 
 /**
- * renderStatistics — Computes and renders the statistics section with tabs.
- * Hides #statistics-section when fewer than 2 occurrences exist.
+ * renderStatistics — Renders the statistics section with tabs.
+ * Hides #statistics-section when result is null (fewer than 2 occurrences).
+ *
+ * @param {object|null} result  Pre-computed result of computeStatistics(), or null.
  */
-export function renderStatistics() {
+export function renderStatistics(result) {
   const sectionEl = getEl('statistics-section');
   const outputEl  = getEl('statistics-output');
   if (!sectionEl || !outputEl) return;
-
-  const result = computeStatistics(loadRecords());
 
   if (!result) {
     sectionEl.classList.add('hidden');
@@ -384,15 +368,15 @@ export function renderStatistics() {
 // ─── Prediction Renderer ──────────────────────────────────────────────────────
 
 /**
- * renderPrediction — Computes and renders the prediction hero card.
- * Hides #prediction-section when fewer than 2 occurrences exist.
+ * renderPrediction — Renders the prediction hero card.
+ * Hides #prediction-section when result is null (fewer than 2 occurrences).
+ *
+ * @param {object|null} result  Pre-computed result of predictNext(), or null.
  */
-export function renderPrediction() {
+export function renderPrediction(result) {
   const sectionEl = getEl('prediction-section');
   const outputEl  = getEl('prediction-output');
   if (!sectionEl || !outputEl) return;
-
-  const result = predictNext(loadRecords());
 
   if (!result) {
     sectionEl.classList.add('hidden');
@@ -416,10 +400,10 @@ export function renderPrediction() {
   const stratDesc = STRATEGY_DESC[strategy] ?? '';
 
   const confidenceDesc = cfClass === 'high'
-    ? `High confidence (≥70 %) — historical intervals are very consistent, so the estimate is likely accurate.`
+    ? CONFIDENCE_NARRATIVE.high
     : cfClass === 'medium'
-      ? `Moderate confidence (40–69 %) — some variability in your intervals; treat the window as a rough guide.`
-      : `Low confidence (<40 %) — intervals are irregular, so the prediction may be off by a significant margin.`;
+      ? CONFIDENCE_NARRATIVE.medium
+      : CONFIDENCE_NARRATIVE.low;
 
   outputEl.innerHTML = `
     <div class="pred-hero">
@@ -456,15 +440,15 @@ export function renderPrediction() {
 
 /**
  * renderChart — Builds the interval series and renders the SVG chart.
- * Hides #chart-section when fewer than 2 occurrences exist.
+ * Hides #chart-section when stats is null (fewer than 2 occurrences).
+ *
+ * @param {string[]}    records  ISO strings already loaded (from renderList).
+ * @param {object|null} stats    Pre-computed result of computeStatistics(), or null.
  */
-export function renderChart() {
+export function renderChart(records, stats) {
   const sectionEl = getEl('chart-section');
   const outputEl  = getEl('chart-output');
   if (!sectionEl || !outputEl) return;
-
-  const records = loadRecords();
-  const stats   = computeStatistics(records);
 
   if (!stats) {
     sectionEl.classList.add('hidden');
@@ -472,11 +456,11 @@ export function renderChart() {
   }
 
   const { unit } = stats;
-  const unitDivisor = unit === 'days' ? 86_400_000 : unit === 'hours' ? 3_600_000 : 60_000;
+  const divisor = msPerUnit(unit);
 
   const dates      = records.map((r) => new Date(r));
   const intervals  = dates.slice(1).map((d, i) =>
-    Math.round((d - dates[i]) / unitDivisor * 100) / 100
+    Math.round((d - dates[i]) / divisor * 100) / 100
   );
 
   // Unit badge
@@ -553,9 +537,6 @@ function initNewSessionBtn() {
       clearSingleFeedback();
 
       renderList();
-      renderStatistics();
-      renderPrediction();
-      renderChart();
     }
   });
 }
@@ -679,28 +660,22 @@ function handleDownloadReport() {
  *
  * @param {File} file
  */
-function handleImport(file) {
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const result = parseImportPayload(e.target.result);
+async function handleImport(file) {
+  const text   = await file.text();
+  const result = parseImportPayload(text);
+  const fileInput = getEl('import-file-input');
 
-    const fileInput = getEl('import-file-input');
-
-    if (!result.ok) {
-      setImportFeedback(result.error, 'error');
-      if (fileInput) fileInput.value = '';
-      return;
-    }
-
-    clearRecords();
-    addRecords(result.occurrences.map((iso) => new Date(iso)));
-
+  if (!result.ok) {
+    setImportFeedback(result.error, 'error');
     if (fileInput) fileInput.value = '';
-    setImportFeedback('', '');
+    return;
+  }
 
-    renderList();
-  };
-  reader.readAsText(file);
+  clearRecords();
+  addRecords(result.occurrences.map((iso) => new Date(iso)));
+  if (fileInput) fileInput.value = '';
+  setImportFeedback('', '');
+  renderList();
 }
 
 // ─── Submit Handler ───────────────────────────────────────────────────────────
@@ -797,5 +772,4 @@ export function initUI() {
   }
 
   renderList();   // applies the correct session mode on page load
-  refreshIcons();
 }

@@ -7,11 +7,12 @@
  * here; all numbers come from computeStatistics().
  */
 
-import { computeStatistics } from './statistics.js';
+import { computeStatistics, MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY } from './statistics.js';
+import { CONFIDENCE_HIGH_THRESHOLD, CONFIDENCE_MEDIUM_THRESHOLD } from './reportConstants.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MS_PER_MINUTE = 60_000;
+// MS_PER_MINUTE, MS_PER_HOUR, MS_PER_DAY imported from statistics.js (ISSUE-08)
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -23,8 +24,8 @@ const MS_PER_MINUTE = 60_000;
  * @returns {number}
  */
 function unitToMs(value, unit) {
-  if (unit === 'days')  return value * 86_400_000;
-  if (unit === 'hours') return value * 3_600_000;
+  if (unit === 'days')  return value * MS_PER_DAY;
+  if (unit === 'hours') return value * MS_PER_HOUR;
   return value * MS_PER_MINUTE;
 }
 
@@ -47,8 +48,8 @@ function clamp(value, min, max) {
  * @returns {'high'|'moderate'|'low'}
  */
 function confidenceLabel(score) {
-  if (score >= 75) return 'high';
-  if (score >= 40) return 'moderate';
+  if (score >= CONFIDENCE_HIGH_THRESHOLD)   return 'high';
+  if (score >= CONFIDENCE_MEDIUM_THRESHOLD) return 'moderate';
   return 'low';
 }
 
@@ -89,7 +90,7 @@ export function predictNext(occurrences) {
     const rawInterval   = nerd.regressionSlope * nextIndex + nerd.regressionIntercept;
     const rawIntervalMs = unitToMs(rawInterval, unit);
     // Clamp to a minimum of 1 minute so the prediction is never in the past
-    intervalUsedMs = Math.max(rawIntervalMs, MS_PER_MINUTE);
+    intervalUsedMs = clamp(rawIntervalMs, MS_PER_MINUTE, Infinity);
   }
 
   // ── Predicted date ──────────────────────────────────────────────────────────

@@ -16,6 +16,12 @@
  * ignored and recomputed from scratch (DEC-0004).
  */
 
+// ─── Imports ──────────────────────────────────────────────────────────────────
+
+import { formatOccurrenceTell, formatOccurrenceDate, formatOccurrenceTime } from './formatters.js';
+import { STATS_GLOSSARY, STATS_LEVEL_DESC, STRATEGY_DESC, CONFIDENCE_NARRATIVE } from './reportConstants.js';
+import { humaniseKey, round2, ISO_DATETIME_RE, msPerUnit } from './utils.js';
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 
 /**
@@ -98,54 +104,7 @@ export function parseImportPayload(jsonString) {
 
 // ─── Markdown Report ──────────────────────────────────────────────────────────
 
-import { formatOccurrenceTell, formatOccurrenceDate, formatOccurrenceTime } from './formatters.js';
-import { STATS_GLOSSARY, STATS_LEVEL_DESC, STRATEGY_DESC } from './reportConstants.js';
-
 // ── Internal formatting helpers ───────────────────────────────────────────────
-
-/**
- * Format an ISO 8601 date string as DD/MM/YYYY.
- * @param {string} iso
- * @returns {string}
- */
-function isoToDate(iso) {
-  const [datePart] = iso.split('T');
-  const [y, m, d]  = datePart.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-/**
- * Format an ISO 8601 datetime string as HH:MM.
- * Returns '—' when the ISO string has no time component.
- * @param {string} iso
- * @returns {string}
- */
-function isoToTime(iso) {
-  const parts = iso.split('T');
-  if (parts.length < 2) return '—';
-  return parts[1].slice(0, 5);
-}
-
-/**
- * Convert a camelCase key to a human-readable Title Case label.
- * @param {string} key
- * @returns {string}
- */
-function humaniseKey(key) {
-  return key
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (c) => c.toUpperCase())
-    .trim();
-}
-
-/**
- * Round a number to 2 decimal places.
- * @param {number} n
- * @returns {number}
- */
-function round2(n) {
-  return Math.round(n * 100) / 100;
-}
 
 /**
  * Keys whose numeric values represent interval lengths and should receive
@@ -158,11 +117,6 @@ const INTERVAL_KEYS = new Set([
   'mad', 'outliers',
   'regressionSlope', 'regressionIntercept',
 ]);
-
-/**
- * Keys whose string values are ISO datetime strings (first / last).
- */
-const ISO_DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
 /**
  * Format a statistics value for the Markdown report.
@@ -211,25 +165,21 @@ function buildPredictionSection(prediction, unit) {
   } = prediction;
 
   const tell          = formatOccurrenceTell(new Date(predictedDate));
-  const dateStr       = isoToDate(predictedDate);
-  const timeStr       = isoToTime(predictedDate);
-  const earliestStr   = `${isoToDate(earliestDate)} ${isoToTime(earliestDate)}`;
-  const latestStr     = `${isoToDate(latestDate)} ${isoToTime(latestDate)}`;
+  const dateStr       = formatOccurrenceDate(new Date(predictedDate));
+  const timeStr       = formatOccurrenceTime(new Date(predictedDate));
+  const earliestStr   = `${formatOccurrenceDate(new Date(earliestDate))} ${formatOccurrenceTime(new Date(earliestDate))}`;
+  const latestStr     = `${formatOccurrenceDate(new Date(latestDate))} ${formatOccurrenceTime(new Date(latestDate))}`;
   const stratDesc     = STRATEGY_DESC[strategy] ?? strategy;
 
-  // Confidence narrative (mirrors uiController.js renderPrediction)
-  let confNarrative;
-  if (confidence >= 70) {
-    confNarrative = 'High confidence (≥70 %) — historical intervals are very consistent, so the estimate is likely accurate.';
-  } else if (confidence >= 40) {
-    confNarrative = 'Moderate confidence (40–69 %) — some variability in your intervals; treat the window as a rough guide.';
-  } else {
-    confNarrative = 'Low confidence (<40 %) — intervals are irregular, so the prediction may be off by a significant margin.';
-  }
+  // Confidence narrative (shared constant — DEC-0006)
+  const confNarrative = confidenceLabel === 'high'
+    ? CONFIDENCE_NARRATIVE.high
+    : confidenceLabel === 'moderate'
+      ? CONFIDENCE_NARRATIVE.medium
+      : CONFIDENCE_NARRATIVE.low;
 
   // Interval used in the session unit (rounded to 2 dp)
-  const unitDivisor = unit === 'days' ? 86_400_000 : unit === 'hours' ? 3_600_000 : 60_000;
-  const intervalUsedInUnit = round2(intervalUsedMs / unitDivisor);
+  const intervalUsedInUnit = round2(intervalUsedMs / msPerUnit(unit));
 
   // Time remaining from now to the predicted date
   const nowMs         = Date.now();
@@ -286,11 +236,11 @@ function buildChartSection(statistics, occurrences) {
   const mean = round2(statistics.basic.mean);
 
   // Build raw interval array in the session unit
-  const unitDivisor = unit === 'days' ? 86_400_000 : unit === 'hours' ? 3_600_000 : 60_000;
+  const divisor   = msPerUnit(unit);
   const dates     = occurrences.map((iso) => new Date(iso).getTime());
   const intervals = [];
   for (let i = 1; i < dates.length; i++) {
-    intervals.push(Math.round((dates[i] - dates[i - 1]) / unitDivisor * 100) / 100);
+    intervals.push(Math.round((dates[i] - dates[i - 1]) / divisor * 100) / 100);
   }
 
   if (intervals.length === 0) return '';
@@ -355,7 +305,7 @@ function buildStatisticsSection(statistics) {
 
   /**
    * Build one level's definition blocks.
-   * @param {object} obj        The level sub-object (basic | advanced | nerd).
+   * @param {object} obj        The level sub-object (basic | advanced | nerd)
    * @param {string} level      'basic' | 'advanced' | 'nerd'
    * @returns {string}
    */
@@ -402,13 +352,23 @@ function buildOccurrencesSection(occurrences) {
   const TRUNCATE_THRESHOLD = 50;
   const SHOW_EDGES         = 10;
 
+  /**
+   * Format a single occurrence ISO string as "DD/MM/YYYY HH:MM".
+   * @param {string} iso
+   * @returns {string}
+   */
+  function fmtOcc(iso) {
+    const d = new Date(iso);
+    return `${formatOccurrenceDate(d)} ${formatOccurrenceTime(d)}`;
+  }
+
   let listLines;
 
   if (count > TRUNCATE_THRESHOLD) {
     const head = occurrences.slice(0, SHOW_EDGES);
     const tail = occurrences.slice(count - SHOW_EDGES);
-    const headLines = head.map((iso, i) => `${i + 1}. ${isoToDate(iso)} ${isoToTime(iso)}`);
-    const tailLines = tail.map((iso, i) => `${count - SHOW_EDGES + i + 1}. ${isoToDate(iso)} ${isoToTime(iso)}`);
+    const headLines = head.map((iso, i) => `${i + 1}. ${fmtOcc(iso)}`);
+    const tailLines = tail.map((iso, i) => `${count - SHOW_EDGES + i + 1}. ${fmtOcc(iso)}`);
     listLines = [
       ...headLines,
       '',
@@ -417,7 +377,7 @@ function buildOccurrencesSection(occurrences) {
       ...tailLines,
     ];
   } else {
-    listLines = occurrences.map((iso, i) => `${i + 1}. ${isoToDate(iso)} ${isoToTime(iso)}`);
+    listLines = occurrences.map((iso, i) => `${i + 1}. ${fmtOcc(iso)}`);
   }
 
   return [
@@ -451,8 +411,8 @@ function buildOccurrencesSection(occurrences) {
 export function buildMarkdownReport(occurrences, statistics, prediction) {
   // ── Header ───────────────────────────────────────────────────────────────────
   const now     = new Date();
-  const genDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-  const genTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const genDate = formatOccurrenceDate(now);
+  const genTime = formatOccurrenceTime(now);
 
   const header = [
     '# Interval Tracker — Session Report',

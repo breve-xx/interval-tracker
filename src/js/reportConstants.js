@@ -9,6 +9,34 @@
  * No imports, no side effects, no DOM or localStorage dependencies.
  */
 
+// ─── Confidence Thresholds ────────────────────────────────────────────────────
+
+/**
+ * Minimum confidence score (inclusive) to be classified as 'high'.
+ * @type {number}
+ */
+export const CONFIDENCE_HIGH_THRESHOLD   = 70;
+
+/**
+ * Minimum confidence score (inclusive) to be classified as 'moderate'.
+ * @type {number}
+ */
+export const CONFIDENCE_MEDIUM_THRESHOLD = 40;
+
+// ─── Confidence Narrative ─────────────────────────────────────────────────────
+
+/**
+ * Plain-English explanation for each confidence tier, rendered in both the
+ * live UI (uiController.js) and the Markdown report (sessionIO.js).
+ *
+ * @type {{ high: string, medium: string, low: string }}
+ */
+export const CONFIDENCE_NARRATIVE = {
+  high  : `High confidence (≥${CONFIDENCE_HIGH_THRESHOLD} %) — historical intervals are very consistent, so the estimate is likely accurate.`,
+  medium: `Moderate confidence (${CONFIDENCE_MEDIUM_THRESHOLD}–${CONFIDENCE_HIGH_THRESHOLD - 1} %) — some variability in your intervals; treat the window as a rough guide.`,
+  low   : `Low confidence (<${CONFIDENCE_MEDIUM_THRESHOLD} %) — intervals are irregular, so the prediction may be off by a significant margin.`,
+};
+
 // ─── Statistics Glossary ──────────────────────────────────────────────────────
 
 /**

@@ -124,7 +124,7 @@ export function renderIntervalChart(container, intervals, unit, stats) {
   const plotW = VIEW_W - PAD.left - PAD.right;
   const plotH = VIEW_H - PAD.top  - PAD.bottom;
 
-  const yMax   = Math.max(...intervals) * 1.18;
+  const yMax   = intervals.reduce((m, v) => v > m ? v : m, -Infinity) * 1.18;
   const ticks  = niceTicks(yMax);
   const yDomain = ticks[ticks.length - 1] || 1;
 

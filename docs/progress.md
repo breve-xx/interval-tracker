@@ -521,7 +521,45 @@ and widest recognition.
 - Updated `package.json` `"license"` field from `"ISC"` to `"MIT"`.
 - Appended a `## Licence` section to `README.md` linking to the `LICENSE` file.
 
-### Final Coverage (2026-05-07)
-- No business-logic modules changed; coverage identical to TASK-0018.
-- **Overall: 97.46 % statements, 86.74 % branches — above ≥ 80 % mandate.**
 - All 220 tests pass (`make test` exits 0).
+
+## TASK-0020: Deep Code Review and Remediation — COMPLETED (2026-05-07)
+
+### Actions Taken
+
+**Category 1 — Logic bugs**
+- ISSUE-01: Added `CONFIDENCE_HIGH_THRESHOLD = 70` and `CONFIDENCE_MEDIUM_THRESHOLD = 40` to `reportConstants.js`. Updated `prediction.js::confidenceLabel`, `uiController.js::confidenceClass`, and `uiController.js::renderPrediction` to use these constants.
+- ISSUE-02: Replaced `Math.max(rawIntervalMs, MS_PER_MINUTE)` with `clamp(rawIntervalMs, MS_PER_MINUTE, Infinity)` in `prediction.js`.
+
+**Category 2 — DRY violations**
+- ISSUE-03/04/05/06: Created `src/js/utils.js` exporting `humaniseKey`, `round2`, `ISO_DATETIME_RE`, and `msPerUnit`. Removed local definitions from `uiController.js` and `sessionIO.js`; both now import from `utils.js`.
+- ISSUE-07: Added `CONFIDENCE_NARRATIVE` to `reportConstants.js`. Removed inline confidence strings from `uiController.js` and `sessionIO.js`.
+- ISSUE-08: Exported `MS_PER_MINUTE`, `MS_PER_HOUR`, `MS_PER_DAY` from `statistics.js`. Removed local `MS_PER_MINUTE` from `prediction.js`; replaced inline literals in `unitToMs` with the imported constants.
+- ISSUE-09: Removed `isoToDate` and `isoToTime` from `sessionIO.js`. All call sites now use `formatOccurrenceDate` / `formatOccurrenceTime` from `formatters.js`.
+- ISSUE-10: Replaced manual date-string construction in `buildMarkdownReport` header with `formatOccurrenceDate(now)` / `formatOccurrenceTime(now)`.
+
+**Category 3 — Performance**
+- ISSUE-11: Refactored `renderList` to call `loadRecords()` and `computeStatistics()` once, passing results to `renderStatistics(result)`, `renderPrediction(result)`, and `renderChart(records, stats)`. Sub-renderers no longer call `loadRecords()` or `computeStatistics()` internally.
+- ISSUE-12: Merged 5 separate `reduce` passes in `computeStatistics` (for sum, variance, mad, skewness, kurtosis) into one preliminary `sum` pass and one single deviation-sum pass — 2 passes total.
+- ISSUE-13: `linearRegression` now returns `{ slope, intercept, yMean }`. `r2Score` accepts `yMean` as a fourth argument, eliminating its internal `reduce`.
+
+**Category 4 — Code style**
+- ISSUE-14: Removed `console.log` and unused `loadRecords` / `renderList` calls from `script.js`.
+- ISSUE-15: Moved all `import` declarations to the top of `sessionIO.js`.
+- ISSUE-16: Replaced `[...formatIds][0]` with `formatIds.values().next().value` in `parser.js`.
+- ISSUE-17: Replaced `intervals.map((_, i) => msToUnit(sortedMs[i], unit))` with `sortedMs.map((ms) => msToUnit(ms, unit))`.
+- ISSUE-18: Replaced explicit comparator in `addRecords` sort with `merged.sort()`.
+- ISSUE-19: Replaced `if (currentStreak > longestStreak) longestStreak = currentStreak` with `longestStreak = Math.max(longestStreak, currentStreak)`.
+- ISSUE-20: Replaced `Math.max(...intervals)` spread in `chartRenderer.js` with a `reduce`.
+- ISSUE-21: Rewrote `handleImport` as `async` using `file.text()` instead of the legacy `FileReader` callback API.
+- ISSUE-22: Renamed `_buildDate` → `buildDate` in `parser.js`.
+- ISSUE-23: Removed redundant trailing `refreshIcons()` call from `initUI` and redundant `renderStatistics/renderPrediction/renderChart` calls from `initNewSessionBtn`.
+
+**Tests**
+- Created `tests/unit/utils.test.js` covering `humaniseKey`, `round2`, `ISO_DATETIME_RE`, and `msPerUnit`.
+- Extended `tests/unit/reportConstants.test.js` with tests for `CONFIDENCE_HIGH_THRESHOLD`, `CONFIDENCE_MEDIUM_THRESHOLD`, and `CONFIDENCE_NARRATIVE`.
+- Updated `tests/unit/prediction.test.js`: fixed threshold check to use constants; added test asserting score ≥ 70 → label `'high'`.
+
+### Final Coverage (2026-05-07)
+- **Overall: 97.7 % statements, 89.34 % branches — above ≥ 80 % mandate.**
+- All 242 tests pass (`make test` exits 0).

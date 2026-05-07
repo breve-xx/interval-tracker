@@ -56,7 +56,7 @@ export function addRecords(newDates) {
   const merged = Array.from(new Set([...existing, ...incoming]));
 
   // Sort chronologically (string ISO comparison works for UTC ISO 8601)
-  merged.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  merged.sort();
 
   saveRecords(merged);
   return merged;

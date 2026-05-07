@@ -102,7 +102,7 @@ const FORMATS = [
         day = raw1; month = raw2;
       }
 
-      return _buildDate(year, month, day, hour, minute, second);
+      return buildDate(year, month, day, hour, minute, second);
     },
   },
 ];
@@ -121,7 +121,7 @@ const FORMATS = [
  * @param {string|number} second
  * @returns {Date|null}
  */
-function _buildDate(year, month, day, hour, minute, second) {
+function buildDate(year, month, day, hour, minute, second) {
   const iso =
     `${String(year).padStart(4, '0')}-` +
     `${String(month).padStart(2, '0')}-` +
@@ -208,7 +208,7 @@ export function parseOccurrences(rawText) {
   }
 
   const homogeneous = formatIds.size <= 1;
-  const formatId = formatIds.size === 1 ? [...formatIds][0] : null;
+  const formatId = formatIds.size === 1 ? formatIds.values().next().value : null;
 
   return { valid, invalid, homogeneous, formatId };
 }

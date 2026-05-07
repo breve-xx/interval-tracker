@@ -7,9 +7,9 @@
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MS_PER_MINUTE = 60_000;
-const MS_PER_HOUR   = 3_600_000;
-const MS_PER_DAY    = 86_400_000;
+export const MS_PER_MINUTE = 60_000;
+export const MS_PER_HOUR   = 3_600_000;
+export const MS_PER_DAY    = 86_400_000;
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ function linearRegression(ys) {
 
   const slope     = ssXX === 0 ? 0 : ssXY / ssXX;
   const intercept = yMean - slope * xMean;
-  return { slope, intercept };
+  return { slope, intercept, yMean };
 }
 
 /**
@@ -94,8 +94,7 @@ function linearRegression(ys) {
  * @param {number}   intercept
  * @returns {number}
  */
-function r2Score(ys, slope, intercept) {
-  const yMean = ys.reduce((s, v) => s + v, 0) / ys.length;
+function r2Score(ys, slope, intercept, yMean) {
   const ssTot = ys.reduce((s, v) => s + (v - yMean) ** 2, 0);
   if (ssTot === 0) return 1;
   const ssRes = ys.reduce((s, v, i) => s + (v - (slope * i + intercept)) ** 2, 0);
@@ -136,7 +135,7 @@ export function computeStatistics(occurrences) {
 
   // Scale all intervals to the chosen unit
   const intervals  = intervalsMs.map((ms) => msToUnit(ms, unit));
-  const sorted     = intervals.map((_, i) => msToUnit(sortedMs[i], unit));
+  const sorted     = sortedMs.map((ms) => msToUnit(ms, unit));
 
   // ── Basic ───────────────────────────────────────────────────────────────────
 
@@ -144,6 +143,16 @@ export function computeStatistics(occurrences) {
   const mean = sum / ni;
   const minV = sorted[0];
   const maxV = sorted[sorted.length - 1];
+
+  // Single pass over intervals for all deviation-based statistics
+  let sumSq = 0, sumCube = 0, sumFourth = 0, sumAbs = 0;
+  for (const v of intervals) {
+    const d   = v - mean;
+    sumSq    += d ** 2;
+    sumCube  += d ** 3;
+    sumFourth+= d ** 4;
+    sumAbs   += Math.abs(d);
+  }
 
   const basic = {
     intervalCount : ni,
@@ -159,7 +168,7 @@ export function computeStatistics(occurrences) {
   // ── Advanced ────────────────────────────────────────────────────────────────
 
   const med     = median(sorted);
-  const varVal  = intervals.reduce((s, v) => s + (v - mean) ** 2, 0) / ni;
+  const varVal  = sumSq / ni;
   const stdDev  = Math.sqrt(varVal);
   const cv      = mean === 0 ? 0 : (stdDev / mean) * 100;
 
@@ -174,7 +183,7 @@ export function computeStatistics(occurrences) {
   else              regularityLabel = 'highly irregular';
 
   // Linear regression on the (unscaled-index, interval-value) series
-  const { slope, intercept } = linearRegression(intervals);
+  const { slope, intercept, yMean: regrYMean } = linearRegression(intervals);
   const threshold = mean * 0.05;
   let trend;
   if      (slope >  threshold) trend = 'increasing';
@@ -195,15 +204,15 @@ export function computeStatistics(occurrences) {
 
   // ── Nerd ────────────────────────────────────────────────────────────────────
 
-  const mad = intervals.reduce((s, v) => s + Math.abs(v - mean), 0) / ni;
+  const mad = sumAbs / ni;
 
   const skewness = stdDev === 0
     ? 0
-    : (intervals.reduce((s, v) => s + (v - mean) ** 3, 0) / ni) / stdDev ** 3;
+    : (sumCube / ni) / stdDev ** 3;
 
   const kurtosis = stdDev === 0
     ? 0
-    : (intervals.reduce((s, v) => s + (v - mean) ** 4, 0) / ni) / stdDev ** 4 - 3;
+    : (sumFourth / ni) / stdDev ** 4 - 3;
 
   const lowerFence = q1 - 1.5 * iqr;
   const upperFence = q3 + 1.5 * iqr;
@@ -215,13 +224,13 @@ export function computeStatistics(occurrences) {
   for (const v of intervals) {
     if (Math.abs(v - mean) <= stdDev) {
       currentStreak++;
-      if (currentStreak > longestStreak) longestStreak = currentStreak;
+      longestStreak = Math.max(longestStreak, currentStreak);
     } else {
       currentStreak = 0;
     }
   }
 
-  const r2 = r2Score(intervals, slope, intercept);
+  const r2 = r2Score(intervals, slope, intercept, regrYMean);
 
   const nerd = {
     mad,

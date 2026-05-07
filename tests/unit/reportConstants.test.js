@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { STATS_GLOSSARY, STATS_LEVEL_DESC, STRATEGY_DESC } from '../../src/js/reportConstants.js';
+import {
+  STATS_GLOSSARY,
+  STATS_LEVEL_DESC,
+  STRATEGY_DESC,
+  CONFIDENCE_HIGH_THRESHOLD,
+  CONFIDENCE_MEDIUM_THRESHOLD,
+  CONFIDENCE_NARRATIVE,
+} from '../../src/js/reportConstants.js';
 
 // ─── STATS_GLOSSARY ───────────────────────────────────────────────────────────
 
@@ -76,5 +83,51 @@ describe('STRATEGY_DESC', () => {
       expect(typeof desc).toBe('string');
       expect(desc.length).toBeGreaterThan(0);
     });
+  });
+});
+
+// ─── CONFIDENCE_HIGH_THRESHOLD / CONFIDENCE_MEDIUM_THRESHOLD ─────────────────
+
+describe('CONFIDENCE_HIGH_THRESHOLD / CONFIDENCE_MEDIUM_THRESHOLD', () => {
+  it('CONFIDENCE_HIGH_THRESHOLD is a number', () => {
+    expect(typeof CONFIDENCE_HIGH_THRESHOLD).toBe('number');
+  });
+
+  it('CONFIDENCE_MEDIUM_THRESHOLD is a number', () => {
+    expect(typeof CONFIDENCE_MEDIUM_THRESHOLD).toBe('number');
+  });
+
+  it('CONFIDENCE_HIGH_THRESHOLD > CONFIDENCE_MEDIUM_THRESHOLD', () => {
+    expect(CONFIDENCE_HIGH_THRESHOLD).toBeGreaterThan(CONFIDENCE_MEDIUM_THRESHOLD);
+  });
+});
+
+// ─── CONFIDENCE_NARRATIVE ─────────────────────────────────────────────────────
+
+describe('CONFIDENCE_NARRATIVE', () => {
+  it('has high, medium, and low keys', () => {
+    expect(CONFIDENCE_NARRATIVE).toHaveProperty('high');
+    expect(CONFIDENCE_NARRATIVE).toHaveProperty('medium');
+    expect(CONFIDENCE_NARRATIVE).toHaveProperty('low');
+  });
+
+  it('all values are non-empty strings', () => {
+    Object.values(CONFIDENCE_NARRATIVE).forEach((text) => {
+      expect(typeof text).toBe('string');
+      expect(text.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('high narrative includes the CONFIDENCE_HIGH_THRESHOLD value', () => {
+    expect(CONFIDENCE_NARRATIVE.high).toContain(String(CONFIDENCE_HIGH_THRESHOLD));
+  });
+
+  it('medium narrative includes both threshold values', () => {
+    expect(CONFIDENCE_NARRATIVE.medium).toContain(String(CONFIDENCE_MEDIUM_THRESHOLD));
+    expect(CONFIDENCE_NARRATIVE.medium).toContain(String(CONFIDENCE_HIGH_THRESHOLD - 1));
+  });
+
+  it('low narrative includes the CONFIDENCE_MEDIUM_THRESHOLD value', () => {
+    expect(CONFIDENCE_NARRATIVE.low).toContain(String(CONFIDENCE_MEDIUM_THRESHOLD));
   });
 });
