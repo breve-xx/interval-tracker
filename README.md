@@ -95,3 +95,9 @@ docs/                      — Architecture, decisions, and task logs
 - **Dev server**: [Vite](https://vitejs.dev/)
 - **Test runner**: [Vitest](https://vitest.dev/) + jsdom
 - **Coverage**: Vitest v8 provider — current overall branch coverage **91.6 %**
+
+---
+
+## Licence
+
+MIT — see [LICENSE](LICENSE) for the full text.

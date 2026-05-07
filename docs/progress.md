@@ -476,3 +476,52 @@ The `list-dmy-slash`, `dmy-slash`, and `dmy-dot` format handlers were replaced b
 - No business-logic modules changed; coverage identical to TASK-0016.
 - **Overall: 97.46 % statements, 86.74 % branches — above ≥ 80 % mandate.**
 - All 220 tests pass (`npm test` exits 0).
+
+---
+
+## TASK-0018: Migrate from Google Fonts to Bunny Fonts — COMPLETED (2026-05-07)
+
+### Actions Taken
+
+**`src/index.html`**
+- Removed the three Google Fonts `<link>` tags (`preconnect` to `fonts.googleapis.com`,
+  `preconnect` to `fonts.gstatic.com`, and the stylesheet `<link>`).
+- Added a single `<link rel="preconnect" href="https://fonts.bunny.net" />` and
+  `<link rel="stylesheet" href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" />`.
+- Inter renders at the same four weights (400, 500, 600, 700) with `display=swap` unchanged.
+- No requests are made to Google-owned domains.
+
+### Final Coverage (2026-05-07)
+- No business-logic modules changed; coverage identical to TASK-0017.
+- **Overall: 97.46 % statements, 86.74 % branches — above ≥ 80 % mandate.**
+- All 220 tests pass (`make test` exits 0).
+
+---
+
+## TASK-0019: Add MIT Licence to the Project — COMPLETED (2026-05-07)
+
+### Dependency licence audit
+
+| Dependency | Role | Licence |
+|---|---|---|
+| `vite` | Build / dev server | MIT |
+| `vitest` | Test runner | MIT |
+| `@vitest/coverage-v8` | Coverage provider | MIT |
+| `jsdom` | DOM environment for tests | MIT |
+| Lucide Icons (CDN) | Runtime — icons | ISC (+ MIT for Feather-derived subset) |
+| Inter typeface (CDN) | Runtime — font | SIL OFL 1.1 |
+
+No dependency introduces a copyleft obligation. MIT selected for maximum reusability
+and widest recognition.
+
+### Actions Taken
+
+- Created `LICENSE` at the repository root with the standard MIT licence text,
+  copyright year 2026, author `breve-xx` (GitHub username from `package.json` repository URL).
+- Updated `package.json` `"license"` field from `"ISC"` to `"MIT"`.
+- Appended a `## Licence` section to `README.md` linking to the `LICENSE` file.
+
+### Final Coverage (2026-05-07)
+- No business-logic modules changed; coverage identical to TASK-0018.
+- **Overall: 97.46 % statements, 86.74 % branches — above ≥ 80 % mandate.**
+- All 220 tests pass (`make test` exits 0).
