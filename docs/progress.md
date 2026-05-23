@@ -596,3 +596,35 @@ and widest recognition.
 ### Final Coverage (2026-05-23)
 - **Overall: 97.79 % statements, 89.94 % branches — above ≥ 80 % mandate.**
 - All 252 tests pass (`make test` exits 0).
+
+---
+
+## TASK-0022: iOS 26 / Safari 26 — Fix Oversized Layout and Horizontal Scroll — COMPLETED (2026-05-23)
+
+### Actions Taken
+
+- **`src/index.html`** (RC-01) — Added `viewport-fit=cover` to the viewport
+  `<meta>` tag so iOS 26's revised floating browser chrome resolves
+  `width=device-width` correctly.
+
+- **`src/css/styles.css`, `html` rule** (RC-03) — Added unprefixed
+  `text-size-adjust: 100%` alongside the existing `-webkit-text-size-adjust`
+  so Safari 26 does not auto-inflate font sizes on narrow viewports.
+
+- **`src/css/styles.css`, `body` rule** (RC-02) — Added `width: 100%` and
+  `overflow-x: hidden` to prevent any overflowing child from silently
+  expanding `<body>` and producing a horizontal scrollbar.
+
+- **`src/css/styles.css`, `@media (max-width: 640px)`** (RC-06) — Added
+  `min-width: 0` to the `.occ-row__gap` block so the TASK-0021 gap badge
+  does not push occurrence rows beyond the viewport on narrow screens.
+  Confirmed `.ops-add { min-width: 0 }` was already present (RC-05).
+
+- **`src/js/chartRenderer.js`** (RC-04) — Set `svg.style.width = '100%'`
+  and `svg.style.height = 'auto'` immediately after the SVG element is
+  created so Safari 26 scales the chart to its container rather than
+  rendering at the SVG default intrinsic size.
+
+### Final State
+- No logic changes; all 252 tests pass (`make test` exits 0).
+- Branch coverage unchanged at 89.94 % — above ≥ 80 % mandate.

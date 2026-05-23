@@ -145,6 +145,8 @@ export function renderIntervalChart(container, intervals, unit, stats) {
     'aria-hidden'     : 'true',
     role              : 'img',
   });
+  svg.style.width  = '100%';
+  svg.style.height = 'auto';
 
   // ── Y-axis grid lines + tick labels ──────────────────────────────────────────
 
