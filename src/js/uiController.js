@@ -25,7 +25,7 @@
 
 import { parseOccurrences } from './parser.js';
 import { loadRecords, addRecords, clearRecords, getLastRecord } from './dataService.js';
-import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell } from './formatters.js';
+import { formatOccurrenceDate, formatOccurrenceTime, formatOccurrenceTell, formatGap } from './formatters.js';
 import { computeStatistics } from './statistics.js';
 import { predictNext } from './prediction.js';
 import { buildExportPayload, parseImportPayload, buildMarkdownReport } from './sessionIO.js';
@@ -186,11 +186,14 @@ function applySessionMode(active) {
  * @param {number} idx  1-based index
  * @returns {string}    HTML string for an <li> element
  */
-function buildCardHTML(iso, idx) {
+function buildCardHTML(iso, idx, prevIso = null) {
   const d    = new Date(iso);
   const date = formatOccurrenceDate(d);
   const time = formatOccurrenceTime(d);
   const tell = formatOccurrenceTell(d);
+  const gapHTML = prevIso
+    ? `<span class="occ-row__gap">${formatGap(new Date(iso) - new Date(prevIso))}</span>`
+    : `<span class="occ-row__gap occ-row__gap--first"></span>`;
   return `<li class="occ-row" data-iso="${iso}">
   <span class="occ-row__num">${idx}</span>
   <span class="occ-row__datetime">
@@ -198,6 +201,7 @@ function buildCardHTML(iso, idx) {
     <span class="occ-row__time">${time}</span>
   </span>
   <span class="occ-row__tell">${tell}</span>
+  ${gapHTML}
 </li>`;
 }
 
@@ -227,7 +231,7 @@ export function renderList() {
     return;
   }
 
-  listEl.innerHTML = records.map((iso, i) => buildCardHTML(iso, i + 1)).join('');
+  listEl.innerHTML = records.map((iso, i) => buildCardHTML(iso, i + 1, records[i - 1] ?? null)).join('');
   sectionEl.classList.remove('hidden');
   renderStatistics(stats);
   renderPrediction(pred);

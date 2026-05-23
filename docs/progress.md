@@ -563,3 +563,36 @@ and widest recognition.
 ### Final Coverage (2026-05-07)
 - **Overall: 97.7 % statements, 89.34 % branches — above ≥ 80 % mandate.**
 - All 242 tests pass (`make test` exits 0).
+
+---
+
+## TASK-0021: Per-Card Gap Display — COMPLETED (2026-05-23)
+
+### Actions Taken
+
+- **`src/js/formatters.js`** — Added and exported `formatGap(ms)`. The helper
+  converts a millisecond duration to a compact human-readable string using a
+  tiered format: `"0 m"`, `"< 1 m"`, `"{m} m"`, `"{h} h {mm} m"`,
+  `"{d} d {h} h {mm} m"` (hours term omitted when zero and days > 0).
+
+- **`src/js/uiController.js`** — Updated import to include `formatGap`.
+  Extended `buildCardHTML(iso, idx, prevIso = null)` with an optional third
+  parameter: when `prevIso` is provided the gap is computed and rendered inside
+  `<span class="occ-row__gap">`; the first card receives
+  `<span class="occ-row__gap occ-row__gap--first">` (empty). Updated the
+  `renderList` call site to pass `records[i - 1] ?? null` as the third argument.
+
+- **`src/css/styles.css`** — Extended `.occ-row` grid from 3 to 4 columns
+  (`2.5rem 1fr 1fr auto`). Added `.occ-row__gap` (muted colour, tabular nums,
+  subtle badge styling) and `.occ-row__gap--first` (hidden). Updated the
+  responsive `@media` override to place the gap badge in column 3 on the second
+  row alongside the tell.
+
+- **`tests/unit/formatters.test.js`** — Added `formatGap` import and a full
+  `describe` block covering: `ms = 0`, sub-minute, exact minutes, hours with
+  zero-padded minutes, multi-day with hours, multi-day without hours (omit
+  hours term), exactly 1 day, 100 days plain, 100 days with leftovers.
+
+### Final Coverage (2026-05-23)
+- **Overall: 97.79 % statements, 89.94 % branches — above ≥ 80 % mandate.**
+- All 252 tests pass (`make test` exits 0).

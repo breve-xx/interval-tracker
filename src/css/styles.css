@@ -655,7 +655,7 @@ svg.lucide {
 
 .occ-row {
   display       : grid;
-  grid-template-columns: 2.5rem 1fr 1fr;
+  grid-template-columns: 2.5rem 1fr 1fr auto;
   align-items   : center;
   gap           : 0.5rem;
   padding       : 0.6rem 1.25rem;
@@ -698,6 +698,25 @@ svg.lucide {
   white-space: nowrap;
   overflow   : hidden;
   text-overflow: ellipsis;
+}
+
+.occ-row__gap {
+  font-size           : 0.75rem;
+  font-weight         : 500;
+  color               : var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space         : nowrap;
+  text-align          : right;
+  background-color    : var(--bg-surface-2);
+  border              : 1px solid var(--border);
+  border-radius       : var(--radius-sm);
+  padding             : 0.1rem 0.45rem;
+  min-width           : 6rem;
+  box-sizing          : border-box;
+}
+
+.occ-row__gap--first {
+  visibility: hidden;
 }
 
 /* ── Onboard "How it works" steps ──────────────────────────────────────────── */
@@ -1000,11 +1019,16 @@ svg.lucide {
   }
 
   .occ-row {
-    grid-template-columns: 2rem 1fr;
+    grid-template-columns: 2rem 1fr auto;
     grid-template-rows   : auto auto;
   }
   .occ-row__tell {
-    grid-column : 2 / -1;
+    grid-column : 2 / 3;
+  }
+  .occ-row__gap {
+    grid-column : 3 / 4;
+    grid-row    : 2 / 3;
+    align-self  : start;
   }
 
   .onboard__title { font-size: 1.5rem; }

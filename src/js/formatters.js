@@ -67,3 +67,40 @@ export function formatOccurrenceTell(date) {
   const time   = formatOccurrenceTime(date);
   return `The ${day}${suffix} of ${month} at ${time}`;
 }
+
+/**
+ * Format a millisecond duration as a compact human-readable gap string.
+ *
+ * Rules:
+ *   ms === 0            → "0 m"
+ *   ms < 60 000         → "< 1 m"
+ *   ms < 3 600 000      → "{m} m"
+ *   ms < 86 400 000     → "{h} h {mm} m"   (minutes zero-padded to 2 digits)
+ *   ms ≥ 86 400 000     → "{d} d {h} h {mm} m"
+ *                          hours term omitted when h === 0  → "{d} d {mm} m"
+ *
+ * @param {number} ms  Non-negative number of milliseconds.
+ * @returns {string}
+ */
+export function formatGap(ms) {
+  if (ms === 0) return '0 m';
+
+  const totalMinutes = Math.floor(ms / 60_000);
+
+  if (totalMinutes === 0) return '< 1 m';
+
+  const days    = Math.floor(totalMinutes / 1440);
+  const hours   = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+
+  const mm = String(minutes).padStart(2, '0');
+
+  if (days > 0) {
+    if (hours === 0) return `${days} d ${mm} m`;
+    return `${days} d ${hours} h ${mm} m`;
+  }
+
+  if (hours > 0) return `${hours} h ${mm} m`;
+
+  return `${totalMinutes} m`;
+}

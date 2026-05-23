@@ -3,6 +3,7 @@ import {
   formatOccurrenceDate,
   formatOccurrenceTime,
   formatOccurrenceTell,
+  formatGap,
 } from '../../src/js/formatters.js';
 
 // Helper: build a local Date with explicit fields to avoid UTC/local mismatch.
@@ -116,5 +117,54 @@ describe('formatOccurrenceTell', () => {
   it('embeds the correct HH:mm in the tell string', () => {
     const result = formatOccurrenceTell(d(2024, 3, 15, 8, 5));
     expect(result).toContain('08:05');
+  });
+});
+
+// ─── formatGap ────────────────────────────────────────────────────────────────
+
+describe('formatGap', () => {
+  it('returns "0 m" for exactly zero milliseconds', () => {
+    expect(formatGap(0)).toBe('0 m');
+  });
+
+  it('returns "< 1 m" for sub-minute positive durations', () => {
+    expect(formatGap(1)).toBe('< 1 m');
+    expect(formatGap(59_999)).toBe('< 1 m');
+  });
+
+  it('returns "{m} m" for exact minute counts under an hour', () => {
+    expect(formatGap(43 * 60_000)).toBe('43 m');
+    expect(formatGap(60_000)).toBe('1 m');
+    expect(formatGap(59 * 60_000)).toBe('59 m');
+  });
+
+  it('returns "{h} h {mm} m" for durations under a day', () => {
+    expect(formatGap(2 * 3_600_000 + 5 * 60_000)).toBe('2 h 05 m');
+    expect(formatGap(1 * 3_600_000 + 0 * 60_000)).toBe('1 h 00 m');
+    expect(formatGap(23 * 3_600_000 + 59 * 60_000)).toBe('23 h 59 m');
+  });
+
+  it('zero-pads minutes to 2 digits in the hours format', () => {
+    expect(formatGap(3 * 3_600_000 + 9 * 60_000)).toBe('3 h 09 m');
+  });
+
+  it('returns "{d} d {h} h {mm} m" for multi-day durations with non-zero hours', () => {
+    expect(formatGap(3 * 86_400_000 + 4 * 3_600_000 + 12 * 60_000)).toBe('3 d 4 h 12 m');
+  });
+
+  it('omits the hours term when hours === 0 and days > 0', () => {
+    expect(formatGap(3 * 86_400_000 + 30 * 60_000)).toBe('3 d 30 m');
+  });
+
+  it('handles exactly 1 day', () => {
+    expect(formatGap(86_400_000)).toBe('1 d 00 m');
+  });
+
+  it('handles large values correctly (100 days)', () => {
+    expect(formatGap(100 * 86_400_000)).toBe('100 d 00 m');
+  });
+
+  it('handles 100 days with leftover hours and minutes', () => {
+    expect(formatGap(100 * 86_400_000 + 2 * 3_600_000 + 15 * 60_000)).toBe('100 d 2 h 15 m');
   });
 });
