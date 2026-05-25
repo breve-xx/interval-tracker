@@ -628,3 +628,25 @@ and widest recognition.
 ### Final State
 - No logic changes; all 252 tests pass (`make test` exits 0).
 - Branch coverage unchanged at 89.94 % — above ≥ 80 % mandate.
+
+## TASK-0023: Fix Off-Centre Waveform in favicon.svg — COMPLETED (2026-05-25)
+
+### Actions Taken
+
+- **`src/favicon.svg`, line 11** — replaced the `<path>` `d` attribute:
+  - **Before:** `M2 16 h5 l3.5 -10.5 L16 26 l3.5 -10.5 h5`
+  - **After:** `M4 16 h4 l4 -11 l8 22 l4 -11 h4`
+
+  Two defects were corrected:
+  1. **Horizontal asymmetry** — the old path spanned x = 2 to x = 24.5
+     (visual centre ≈ 13.25). The new path spans x = 4 to x = 28, giving
+     equal 4 px margins on both sides and a visual centre exactly at x = 16.
+  2. **Vertical asymmetry** — the old peak was 10.5 px above the midline
+     (y = 5.5) while the trough was only 10 px below (y = 26), causing the
+     right flat segment to land at y = 15.5 instead of y = 16. The new path
+     places peak at y = 5 and trough at y = 27 (11 px each), with both flat
+     segments on y = 16.
+
+### Final State
+- Pure SVG change; no JS, CSS, or HTML files modified.
+- No tests affected; branch coverage unchanged at 89.94 %.
